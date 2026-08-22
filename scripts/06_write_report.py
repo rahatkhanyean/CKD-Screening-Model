@@ -1851,6 +1851,16 @@ def main() -> int:
           "resamples is an interval for the procedure rather than for the "
           "predictions.")
         w("")
+        w("One detail matters enough to state. A bootstrap sample contains "
+          "the same patient several times, so the outer folds within each "
+          "resample are formed over *patients* rather than rows: every "
+          "copy of a patient stays on the same side of every split. "
+          "Without that constraint a model would be evaluated on patients "
+          "it had trained on, which is the failure this study exists to "
+          "measure and would not be excusable in its own methods. The "
+          "constraint applies only to resampled data; in the main analysis "
+          "each row is a distinct patient and the splitting is unchanged.")
+        w("")
         w("| Configuration | Model | Point estimate | Prediction-level 95% CI | Procedure-level 95% CI | Width ratio |")
         w("|---|---|---:|---|---|---:|")
         for _, r in proc_boot.iterrows():
@@ -1873,10 +1883,16 @@ def main() -> int:
               f"{fmt(r['procedure_ci_low'])} - {fmt(r['procedure_ci_high'])} | "
               f"{ratio_txt} |")
         w("")
-        w(f"Each cell rests on "
-          f"{int(proc_boot['n_resamples_used'].min())}-"
-          f"{int(proc_boot['n_resamples_used'].max())} completed resamples "
-          f"of the full procedure. The honest intervals are wider, which "
+        lo_n = int(proc_boot["n_resamples_used"].min())
+        hi_n = int(proc_boot["n_resamples_used"].max())
+        n_txt = f"{lo_n}" if lo_n == hi_n else f"{lo_n}-{hi_n}"
+        n_failed_total = int(proc_boot["n_failed"].sum())
+        w(f"Each cell rests on {n_txt} completed resamples "
+          f"of the full procedure"
+          + (f" ({n_failed_total} resample(s) failed and are counted, not "
+             f"discarded silently)" if n_failed_total else
+             ", with no resample failing")
+          + f". The honest intervals are wider, which "
           f"is the expected direction and the reason the caveat in section "
           f"5.8 was worth stating. They are the intervals a reader should "
           f"use when asking whether two configurations differ: on this "

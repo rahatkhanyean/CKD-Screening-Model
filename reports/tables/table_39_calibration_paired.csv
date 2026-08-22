@@ -1,0 +1,2 @@
+comparison,n_pairs,isotonic_better_in,isotonic_better_fraction,median_difference,mean_difference
+"isotonic minus sigmoid (Brier, paired by config x model x repeat)",120,105,0.875,-0.005618750871255547,-0.0058349667580817575

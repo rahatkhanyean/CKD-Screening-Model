@@ -651,6 +651,33 @@ The largest deviation from the reference encoding across every cell and every al
 
 Taken with section 5.16 this is a reasonably complete answer to the representation question. The published data can be re-expressed as ordinal ranks, as unordered indicators, or replaced outright by the measurements they were derived from, and the models land in the same place each time. That is a further symptom of the ceiling rather than a virtue of the encoding: when a sample separates as easily as this one, most reasonable representations of it will do.
 
+### 5.18 An honest interval: bootstrapping the whole procedure
+
+The confidence intervals reported so far resample patients over the pooled out-of-fold predictions, holding the fitted models fixed. Section 5.8 notes that this understates total uncertainty, because it cannot see the variability introduced by the model selection, tuning and calibration decisions being re-made on a different sample. This section removes that shortcut: for each resample of the patients the **entire nested procedure is re-run from scratch**, and the spread across resamples is an interval for the procedure rather than for the predictions.
+
+One detail matters enough to state. A bootstrap sample contains the same patient several times, so the outer folds within each resample are formed over *patients* rather than rows: every copy of a patient stays on the same side of every split. Without that constraint a model would be evaluated on patients it had trained on, which is the failure this study exists to measure and would not be excusable in its own methods. The constraint applies only to resampled data; in the main analysis each row is a distinct patient and the splitting is unchanged.
+
+| Configuration | Model | Point estimate | Prediction-level 95% CI | Procedure-level 95% CI | Width ratio |
+|---|---|---:|---|---|---:|
+| Full valid | SVM (RBF) | 1.000 | 1.000 - 1.000 | 0.999 - 1.000 | n/a (degenerate) |
+| Laboratory | SVM (RBF) | 0.995 | 0.988 - 0.999 | 0.970 - 0.999 | 2.7x |
+| Low-cost | Random forest | 0.992 | 0.981 - 0.999 | 0.968 - 0.999 | 1.7x |
+| Low-cost | SVM (RBF) | 0.991 | 0.979 - 0.999 | 0.960 - 0.998 | 1.8x |
+
+Each cell rests on 200 completed resamples of the full procedure, with no resample failing. The honest intervals are wider, which is the expected direction and the reason the caveat in section 5.8 was worth stating. They are the intervals a reader should use when asking whether two configurations differ: on this evidence, differences of the size discussed in section 5.3 remain unresolved, and the study's inability to distinguish the low-cost and laboratory sets is if anything understated by the narrower intervals reported elsewhere.
+
+### 5.19 Does the isotonic result survive more resampling?
+
+Section 5.6 reported that isotonic calibration achieved a better median Brier score than Platt scaling - contrary to the usual expectation at this sample size, and resting on 25 outer test sets. The comparison was repeated with four times the resampling: 20 repeats, giving 100 outer test sets, on a restricted grid. Statistics are computed within each repeat and then summarised, as elsewhere.
+
+| Calibration | Median Brier | IQR | Median ECE | Median slope | Unidentified slopes |
+|---|---:|---:|---:|---:|---:|
+| Isotonic | 0.0288 | 0.0082 | 0.0270 | 1.148 | 0 |
+| Platt / sigmoid | 0.0337 | 0.0084 | 0.0665 | 2.378 | 0 |
+| Uncalibrated | 0.0345 | 0.0113 | 0.0478 | 1.887 | 0 |
+
+Paired within each (configuration x model x repeat) cell, isotonic gives the lower Brier score in 105 of 120 comparisons (88%), with a median difference of -0.0056. The ordering therefore survives the additional resampling. Either way the practical difference is small, and the more consequential calibration finding in this study is not which method wins but that the top-ranked model's probability scale is not identified at all (section 5.6).
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -872,3 +899,8 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `table_36_tripod_ai.csv`
 - `table_36_tripod_ai_summary.csv`
 - `table_37_encoding_robustness.csv`
+- `table_38_procedure_bootstrap.csv`
+- `table_38_procedure_bootstrap_draws.csv`
+- `table_39_calibration_experiment.csv`
+- `table_39_calibration_paired.csv`
+- `table_39_calibration_per_repeat.csv`

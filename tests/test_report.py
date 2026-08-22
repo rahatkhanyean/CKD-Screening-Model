@@ -77,10 +77,19 @@ class TestNoTemplateArtifacts:
 
     def test_na_appears_only_in_allowed_contexts(self, report_text):
         """'n/a' may appear only where a quantity is legitimately undefined
-        and the sentence says why (slope under separation)."""
+        AND the same line says why.
+
+        Allowed reasons, each corresponding to a real situation in this
+        study: a calibration slope that is not identified under complete
+        separation, and a ratio against a zero-width (degenerate)
+        reference interval. The list is deliberately short - the point is
+        that an unexplained 'n/a' is a template bug, so a new reason must
+        be added here consciously rather than slipping through.
+        """
+        allowed = ("undefined", "not identified", "degenerate")
         for line in report_text.splitlines():
             if re.search(r"(?<![A-Za-z])n/a(?![A-Za-z])", line):
-                assert "undefined" in line or "not identified" in line, (
+                assert any(reason in line for reason in allowed), (
                     f"unexplained 'n/a' in report line: {line[:120]}"
                 )
 

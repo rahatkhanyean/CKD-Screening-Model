@@ -4,6 +4,75 @@ Newest entries at the top. One entry per work session / phase milestone.
 
 ---
 
+## 2026-08-22 — Phase 4 + Phase 5. A wrong assumption caught and corrected.
+
+Commits `78e4a0f`, `4316d3a`, `5ade74c`, `dee0621`, `6d264cc`.
+Suite **373 passed, 7 skipped** (skips = tables regenerating).
+
+**Interrupted by loadshedding** partway through. No partial artefacts were
+left, so the two affected runs (calibration at 20 repeats, whole-procedure
+bootstrap) restarted from a clean slate. Lesson applied: background jobs
+now log to files instead of through `| tail`, which buffers everything
+until exit — that blindness earlier made a slow run look possibly stuck.
+
+**4a — encoding is not load-bearing.** Four encodings (midpoint,
+bin_index, rank_normal, one-hot) × 2 configs × 3 models × 2 calibrations,
+identical seeds and folds. Largest deviation from the reference encoding
+across all 48 cells: **0.0101 ROC-AUC** (one-hot, low-cost, SVM), inside
+the bootstrap intervals. One-hot expands laboratory to 86 columns on 200
+patients — the deliberate extreme — and still lands in the same place.
+With §5.16 this closes the representation question.
+
+**4d — the isotonic result survives.** At 20 repeats (100 outer test
+sets): isotonic median Brier **0.0288** vs sigmoid 0.0337 vs none 0.0345;
+median calibration slope **1.148** vs 2.378 vs 1.887. Paired within
+(config × model × repeat), isotonic wins **105 of 120** (87.5%), median
+difference −0.0056. The surprising §5.6 observation is real, not noise.
+Beta calibration deliberately not added — it needs a custom
+CalibratedClassifierCV wrapper, and the question worth answering was
+whether the ordering survives resampling.
+
+**4c — a bug caught before it ran, and a prediction of mine that failed.**
+Reviewing stage 15 before spending an hour on it: bootstrap-then-CV puts
+copies of the same patient on both sides of a split, so a model is tested
+on a patient it trained on. Fixed with `StratifiedGroupKFold` keyed on
+original patient index; `groups=None` default leaves the reference path
+byte-identical (asserted against committed predictions).
+
+**I got the rationale wrong and the test caught me.** I asserted the
+leakage would inflate each replicate and compress the honest interval
+toward 1.0, and wrote a test asserting ungrouped > grouped. It **failed**:
+grouped 0.9923 vs ungrouped 0.9876. Why the prediction was bad —
+StratifiedGroupKFold also changes fold composition (confounded
+comparison), and at a ~0.99 ceiling one draw cannot resolve a difference
+that small. The fix stands on **definitional** grounds, not empirical
+ones. The test now asserts the structural fact (duplicated patients
+demonstrably span an ungrouped split, demonstrably do not span a grouped
+one) and the docstring records the failed prediction so it is not
+repeated.
+
+**5a/5b/5c.** TRIPOD+AI checklist as Appendix A (30 items: 23 satisfied,
+4 partly, 1 adapted, 2 n/a — `partly` visible so it audits rather than
+asserts). `requirements.lock.txt` with interpreter and BLAS build.
+GitHub Actions CI: suite + cheap stages + raw-data checksum + fails if
+regenerated artefacts drift from committed. `make_archive.py` (per-file
+SHA-256 manifest, refuses a dirty tree) and `CITATION.cff` with author
+fields left unfilled rather than guessed.
+
+**Reproducibility limit found and stated.** Rebuilding the environment
+from the pinned requirements reproduces the stored predictions only to
+**~1.1e-16**, not bit-for-bit. Verified pre-existing by reverting to
+unmodified HEAD sources. It is the rebuilt BLAS, not the analysis. The
+regression gate asserts 1e-12 rather than claiming exactness the project
+cannot deliver; the report's reproducibility statement now says so.
+
+**N7 dropped deliberately** (referral-capacity operating point): it would
+reintroduce the deployment framing the reframe removed, and its
+methodological content is already design decision (d). Recorded in the
+docs roadmap status table rather than silently skipped.
+
+---
+
 ## 2026-08-22 — Phase 3d COMPLETE + 5a. Three findings, one of which cuts against our own thesis.
 
 Commits `59f5ae5`, `00d9843`. Full suite **345 passed**.
