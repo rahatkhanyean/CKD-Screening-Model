@@ -87,6 +87,20 @@ cases (sensitivity-only external check), which is the honest usage.
 
 ---
 
+## 2026-08-22 — Phase 0.1 GATE PASSED: environment restored, 227/227 green
+
+- `.venv` rebuilt from `requirements.txt`; every pinned version installed
+  exactly (numpy 2.5.2, pandas 3.0.5, scipy 1.18.0, scikit-learn 1.9.0,
+  matplotlib 3.11.1, PyYAML 6.0.3, xgboost 3.4.1, catboost 1.2.10,
+  shap 0.52.0, interpret 0.7.8, pytest 9.1.1) on CPython 3.14.5.
+- **Full suite: 227 passed in 166.38s.** The 213-vs-227 discrepancy is
+  resolved: 14 tests were parametrized over the optional model deps
+  (xgboost/interpret/shap/catboost) missing from the ambient interpreter.
+  The documented count was correct for the reference environment.
+- Gate satisfied: source changes may now begin (Phase 0.2 registry).
+
+---
+
 ## 2026-08-22 — Phase 0.1: baseline integrity (in progress)
 
 **Done**
