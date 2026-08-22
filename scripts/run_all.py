@@ -90,6 +90,17 @@ def main() -> int:
                                  "Stage 9: optimism accounting")
     timings["10 EBM shapes"] = run([py, "scripts/10_ebm_shapes.py"],
                                    "Stage 10: readable low-cost rule (EBM shapes)")
+    timings["11 recovery"] = run([py, "scripts/11_continuous_recovery.py"],
+                                 "Stage 11: continuous-value recovery")
+    if not args.skip_cv:
+        timings["12 binned vs continuous"] = run(
+            [py, "scripts/12_binned_vs_continuous.py", "--n-jobs", str(args.n_jobs)],
+            "Stage 12: binned versus continuous at the model level",
+        )
+    else:
+        print("\nSkipping stage 12; reusing existing arm predictions.")
+    timings["13 TRIPOD"] = run([py, "scripts/13_tripod_checklist.py"],
+                               "Stage 13: TRIPOD+AI checklist")
     timings["06 report"] = run([py, "scripts/06_write_report.py"],
                                "Stage 6: assemble the research report")
     timings["notebook"] = run([py, "scripts/make_notebook.py"],

@@ -45,22 +45,39 @@ Two properties of the file dominate every design decision:
    recoverable. This is a property of the published data, not a modelling
    choice.
 
-### 1.2 The pipeline, in six stages
+### 1.2 The pipeline
 
 Each stage is a standalone script; `scripts/run_all.py` runs them in order and
 stops at the first failure. All reusable logic lives in `src/ckd/` — the
 scripts orchestrate, they do not implement.
 
+Stages 0 and 7–12 were added when the study was reframed from a screening
+feasibility study to a re-analysis of the benchmark itself (see Part 4).
+Stage numbering reflects the order in which stages were written, not the
+order they run in; `run_all.py` is the authority on order.
+
 | # | Script | Produces | Runtime |
 |---|---|---|---|
+| 0 | `00_provenance.py` | Provenance gate over registered external datasets: tables 24/24-evidence/24-agreement, `reports/external/provenance_report.md` | ~30 s |
 | 1 | `01_prepare_data.py` | `ckd_clean.csv`, `ckd_encoded.csv`, `bin_mappings.json`, `data_dictionary.csv`, `feature_configurations.csv`, `reports/data_quality_report.md` | 2.3 s |
 | 2 | `02_eda.py` | Figures E1–E5, tables 00–06 (all labelled EXPLORATORY) | 6.5 s |
-| — | `pytest tests/` | 227 automated checks | 158 s |
-| 3 | `03_nested_cv.py` | `cv_predictions.csv.gz` (108,000 rows), `cv_predictions_folds.csv`, run manifest | 71.9 min |
+| — | `pytest tests/` | 338 automated checks | ~170 s |
+| 3 | `03_nested_cv.py` | `cv_predictions.csv.gz` (108,000 rows), `cv_predictions_folds.csv`, run manifest. `--label-variant` produces the two label-robustness runs | 71.9 min |
 | 4 | `04_evaluate.py` | Tables 08–18 and 21–23, figures R1–R9 and R12 | 165 s |
 | 5 | `05_importance_stability.py` | Tables 19–20, figures R10 (x3) and R11 | ~30 min |
-| 6 | `06_write_report.py` | `reports/research_report.md` (595 lines) | 2 s |
+| 7 | `07_literature.py` | Prior-work survey: tables 26 and 26-summary | 1 s |
+| 8 | `08_sensitivity_labels.py` | Label-robustness comparison: table 27 | 5 s |
+| 9 | `09_optimism.py` | Apparent vs nested-CV performance: table 29 | ~2 min |
+| 10 | `10_ebm_shapes.py` | Readable low-cost rule: tables 28/28-summary/28-notes, fig R13 | ~9 min |
+| 11 | `11_continuous_recovery.py` | Continuous-value recovery: tables 30–34, fig R14, `ckd_recovered_continuous.csv` | ~1 min |
+| 12 | `12_binned_vs_continuous.py` | Model-level binned-vs-continuous comparison: table 35 | ~25 min |
+| 6 | `06_write_report.py` | `reports/research_report.md` | 2 s |
 | — | `make_notebook.py` | `notebooks/01_analysis_walkthrough.ipynb` (37 cells) | 1 s |
+
+Stages 11 and 12 are **gated**: each refuses to run unless the provenance
+report classifies the source release SAME-SOURCE, because recovering one
+cohort's values from another is only legitimate when they are the same
+patients.
 
 Stage 3 is the only expensive step. It fits roughly 100,000 models:
 6 feature configurations x 6 model families x 3 calibration methods x 5 repeats

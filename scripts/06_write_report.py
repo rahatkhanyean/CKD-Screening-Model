@@ -1727,6 +1727,61 @@ def main() -> int:
           "but only because a second release of the same patients existed.")
         w("")
 
+    # ---------------- 5.16 Model-level binned vs continuous ----------------
+    bvc = t("table_35_binned_vs_continuous.csv")
+    w("### 5.16 Would the continuous data have changed any conclusion?")
+    w("")
+    w(f"Section 5.15 measured the encoding one variable at a time. The "
+      f"question that matters for the benchmark is whether it changes what "
+      f"a study would *conclude*. The same {n_pinned_rec} patients were "
+      f"therefore modelled twice under the identical nested design, seeds "
+      f"and pipelines, differing only in the representation of the "
+      f"recoverable variables: the file as released, against the source's "
+      f"measurements with unobserved cells left missing and imputed inside "
+      f"training folds.")
+    w("")
+    w("| Configuration | Model | Calibration | ROC-AUC binned | ROC-AUC continuous | Difference |")
+    w("|---|---|---|---:|---:|---:|")
+    for _, r in bvc.iterrows():
+        w(f"| {config_label(r['config'])} | {model_label(r['model'])} | "
+          f"{calibration_label(r['calibration'])} | "
+          f"{fmt(r['roc_auc_binned'])} | {fmt(r['roc_auc_continuous'])} | "
+          f"{r['delta_roc_auc']:+.4f} |")
+    w("")
+    biggest = bvc.loc[bvc["delta_roc_auc"].abs().idxmax()]
+    w(f"**Nothing changes.** The largest difference in either direction is "
+      f"{abs(float(biggest['delta_roc_auc'])):.4f} ROC-AUC "
+      f"({config_label(biggest['config'])}, {model_label(biggest['model'])}), "
+      f"an order of magnitude smaller than the bootstrap intervals reported "
+      f"in section 5.8. Restoring the measurements neither rescues the "
+      f"binned models nor exposes them.")
+    w("")
+    w(f"That result is more interesting than a difference would have been. "
+      f"Serum creatinine gains "
+      f"{float(costs.iloc[0]['binning_cost']):.4f} ROC-AUC on its own when "
+      f"its true values are restored - the single largest univariate "
+      f"change in the study - and the multivariable models do not benefit "
+      f"at all. The reason is the ceiling documented in section 5.5: with "
+      f"haemoglobin at univariate ROC-AUC "
+      f"{fmt(top_sep['univariate_auc'])} and packed cell volume close "
+      f"behind, the information that restored creatinine supplies is "
+      f"already present several times over. One can destroy the resolution "
+      f"of the most diagnostic laboratory analyte in the dataset and the "
+      f"models will not notice, because the case mix hands them the answer "
+      f"through anaemia and urine concentration instead.")
+    w("")
+    w("Two cautions on reading this. The comparison is a net effect: the "
+      "continuous arm also handles missing values honestly, where the "
+      "released arm carries the constants described above, so "
+      "representation and missingness handling move together. And a null "
+      "result on a saturated problem is weak evidence about an unsaturated "
+      "one - on a genuine screening series, where creatinine would have to "
+      "carry weight that anaemia cannot, the same encoding could matter a "
+      "great deal. What this section rules out is the specific worry that "
+      "the published binning is why performance on this benchmark looks "
+      "the way it does. It is not; the case mix is.")
+    w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
@@ -1819,6 +1874,29 @@ def main() -> int:
       "calibration method is not the better one when there are only a few "
       "hundred observations to fit it with.")
     w("")
+    w("**What the recovered measurements add.** Because the overlap is with "
+      "a continuous-valued release of the same patients, it is possible to "
+      "ask what the published representation cost - a question that is "
+      "normally unanswerable, since one cannot usually observe the same "
+      "cohort twice. Two things follow. The binning is mostly benign but "
+      "catastrophic in one place, serum creatinine, where it collapses "
+      "normal-to-severe into a single category; a benchmark that flattens "
+      "its most diagnostic analyte is not measuring what its users think "
+      "it measures. And the release supplied constants for missing "
+      "laboratory values whose absence is itself strongly outcome-related, "
+      "so a substantial minority of some columns are not observations. "
+      "Neither property is discoverable from the released file, which is "
+      "the general point: the trustworthiness of a benchmark is not a "
+      "property one can establish by analysing it.")
+    w("")
+    w("It is worth being explicit that this last mechanism cuts the other "
+      "way. Constant imputation of informatively-missing data makes the "
+      "classes *harder* to separate here, not easier, so it cannot be "
+      "enlisted in an argument that everything about this benchmark "
+      "flatters its users. It is reported because it is true and because a "
+      "reader deciding whether to trust the dataset needs to know it, not "
+      "because it supports the thesis.")
+    w("")
     w(f"The stability analysis is, in a sense, the most honest part of the "
       f"study. With Kendall's W of {fmt(kendall)} across "
       f"{manifest['outer_folds'] * manifest['repeats']} outer folds, the "
@@ -1868,11 +1946,18 @@ def main() -> int:
       f"{fmt(clin_early['sensitivity'], 3) if clin_early is not None else 'n/a'}. "
       f"**No headline figure in this report should be read as an estimate of "
       f"screening performance.**")
-    w("5. **Pre-discretised predictors.** The published file contains only "
-      "binned intervals. Real continuous values are unrecoverable, open-ended "
-      "tail bins are compressed to their finite edge, and the effective "
-      "measurement precision of every variable is unknown. A model built on "
-      "continuous measurements might perform differently in either direction.")
+    w(f"5. **Pre-discretised predictors - now measured rather than "
+      f"assumed.** The published file contains only binned intervals, and "
+      f"open-ended tail bins are compressed to their finite edge. Section "
+      f"5.15 quantifies the consequence using the recovered measurements: "
+      f"for every variable except serum creatinine the encoding costs at "
+      f"most {costs[costs['variable'] != 'sc']['binning_cost'].abs().max():.4f} "
+      f"univariate ROC-AUC, while serum creatinine loses "
+      f"{float(costs.iloc[0]['binning_cost']):.4f}. The same section shows "
+      f"that {int(imput['n_unobserved_in_source'].sum())} cells the source "
+      f"leaves blank carry constant values here. Both are properties of "
+      f"the release that no analysis of the released file alone could "
+      f"detect, and both are now bounded rather than speculated about.")
     w("6. **No data dictionary.** The dataset ships without variable "
       f"definitions [4]. {len(uncertain_variables())} variables have "
       "interpretations that could not be settled from the file and are flagged "
@@ -2154,7 +2239,29 @@ def main() -> int:
     w("")
 
     # ---------------- Appendix ----------------
-    w("## Appendix A. Generated artefacts")
+    # ---------------- Appendix: TRIPOD+AI ----------------
+    tripod = t("table_36_tripod_ai.csv")
+    tripod_sum = t("table_36_tripod_ai_summary.csv").set_index("status")["n_items"]
+    w("## Appendix A. TRIPOD+AI checklist")
+    w("")
+    w(f"Reporting follows the spirit of TRIPOD+AI [3]. Of "
+      f"{int(tripod_sum.sum())} items, "
+      f"{int(tripod_sum.get('satisfied', 0))} are satisfied, "
+      f"{int(tripod_sum.get('partly', 0))} partly, "
+      f"{int(tripod_sum.get('adapted', 0))} adapted (the study is a "
+      f"benchmark re-analysis, not model development), and "
+      f"{int(tripod_sum.get('not-applicable', 0))} not applicable. "
+      f"Items that are only partly met say so; the checklist is an audit, "
+      f"not a compliance claim.")
+    w("")
+    w("| # | Section | Item | Status | Evidence |")
+    w("|---:|---|---|---|---|")
+    for _, r in tripod.iterrows():
+        w(f"| {r['item']} | {r['section']} | {r['topic']} | "
+          f"**{r['status']}** | {r['evidence']} |")
+    w("")
+
+    w("## Appendix B. Generated artefacts")
     w("")
     w("**Figures** (`reports/figures/`, 300 dpi PNG and PDF)")
     w("")

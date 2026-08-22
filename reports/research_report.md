@@ -605,6 +605,37 @@ The missingness is not random. A patient with CKD is 5 to 31 times more likely t
 
 `bp (Diastolic)` is an indicator for diastolic pressure at or above 80 mmHg, and `bp limit` bands the same measurement into at-or-below 70 / exactly 80 / at-or-above 90. Both readings hold for every pinned patient but a handful (one record coded 1 at 60 mmHg; two coded 0 at 100 and 110 mmHg), which are further instances of the data-entry noise documented in section 3.4. The uncertainty flags on these variables can now be removed - but only because a second release of the same patients existed.
 
+### 5.16 Would the continuous data have changed any conclusion?
+
+Section 5.15 measured the encoding one variable at a time. The question that matters for the benchmark is whether it changes what a study would *conclude*. The same 187 patients were therefore modelled twice under the identical nested design, seeds and pipelines, differing only in the representation of the recoverable variables: the file as released, against the source's measurements with unobserved cells left missing and imputed inside training folds.
+
+| Configuration | Model | Calibration | ROC-AUC binned | ROC-AUC continuous | Difference |
+|---|---|---|---:|---:|---:|
+| Laboratory | Random forest | Uncalibrated | 0.987 | 0.994 | +0.0070 |
+| Full valid | Logistic regression | Isotonic | 1.000 | 1.000 | +0.0001 |
+| Full valid | Logistic regression | Uncalibrated | 1.000 | 1.000 | +0.0000 |
+| Full valid | SVM (RBF) | Uncalibrated | 1.000 | 1.000 | +0.0000 |
+| Full valid | SVM (RBF) | Isotonic | 1.000 | 1.000 | +0.0000 |
+| Low-cost | Logistic regression | Uncalibrated | 0.984 | 0.984 | -0.0004 |
+| Laboratory | Random forest | Isotonic | 0.989 | 0.989 | -0.0005 |
+| Full valid | Random forest | Isotonic | 0.999 | 0.999 | -0.0006 |
+| Full valid | Random forest | Uncalibrated | 1.000 | 0.999 | -0.0006 |
+| Laboratory | Logistic regression | Uncalibrated | 0.995 | 0.993 | -0.0013 |
+| Low-cost | Random forest | Isotonic | 0.990 | 0.988 | -0.0018 |
+| Low-cost | SVM (RBF) | Isotonic | 0.991 | 0.989 | -0.0021 |
+| Low-cost | Logistic regression | Isotonic | 0.987 | 0.985 | -0.0024 |
+| Laboratory | SVM (RBF) | Uncalibrated | 0.994 | 0.992 | -0.0024 |
+| Laboratory | SVM (RBF) | Isotonic | 0.994 | 0.991 | -0.0037 |
+| Low-cost | SVM (RBF) | Uncalibrated | 0.989 | 0.984 | -0.0046 |
+| Laboratory | Logistic regression | Isotonic | 0.993 | 0.988 | -0.0049 |
+| Low-cost | Random forest | Uncalibrated | 0.993 | 0.981 | -0.0122 |
+
+**Nothing changes.** The largest difference in either direction is 0.0122 ROC-AUC (Low-cost, Random forest), an order of magnitude smaller than the bootstrap intervals reported in section 5.8. Restoring the measurements neither rescues the binned models nor exposes them.
+
+That result is more interesting than a difference would have been. Serum creatinine gains 0.2662 ROC-AUC on its own when its true values are restored - the single largest univariate change in the study - and the multivariable models do not benefit at all. The reason is the ceiling documented in section 5.5: with haemoglobin at univariate ROC-AUC 0.968 and packed cell volume close behind, the information that restored creatinine supplies is already present several times over. One can destroy the resolution of the most diagnostic laboratory analyte in the dataset and the models will not notice, because the case mix hands them the answer through anaemia and urine concentration instead.
+
+Two cautions on reading this. The comparison is a net effect: the continuous arm also handles missing values honestly, where the released arm carries the constants described above, so representation and missingness handling move together. And a null result on a saturated problem is weak evidence about an unsaturated one - on a genuine screening series, where creatinine would have to carry weight that anaemia cannot, the same encoding could matter a great deal. What this section rules out is the specific worry that the published binning is why performance on this benchmark looks the way it does. It is not; the case mix is.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -625,6 +656,10 @@ Note that the best valid model overall used the Full valid configuration rather 
 
 Calibration deserves particular emphasis because it is what makes a predicted probability usable for a referral decision. A model with good discrimination but a calibration slope well below 1 will systematically overstate risk in the patients it is most confident about - exactly the patients whose management would change. The comparison here also illustrates a general point about small samples: the more flexible calibration method is not the better one when there are only a few hundred observations to fit it with.
 
+**What the recovered measurements add.** Because the overlap is with a continuous-valued release of the same patients, it is possible to ask what the published representation cost - a question that is normally unanswerable, since one cannot usually observe the same cohort twice. Two things follow. The binning is mostly benign but catastrophic in one place, serum creatinine, where it collapses normal-to-severe into a single category; a benchmark that flattens its most diagnostic analyte is not measuring what its users think it measures. And the release supplied constants for missing laboratory values whose absence is itself strongly outcome-related, so a substantial minority of some columns are not observations. Neither property is discoverable from the released file, which is the general point: the trustworthiness of a benchmark is not a property one can establish by analysing it.
+
+It is worth being explicit that this last mechanism cuts the other way. Constant imputation of informatively-missing data makes the classes *harder* to separate here, not easier, so it cannot be enlisted in an argument that everything about this benchmark flatters its users. It is reported because it is true and because a reader deciding whether to trust the dataset needs to know it, not because it supports the thesis.
+
 The stability analysis is, in a sense, the most honest part of the study. With Kendall's W of 0.471 across 25 outer folds, the feature ranking is only moderately reproducible. Any narrative that named the 'top predictors of CKD' from a single fit of this dataset would be reporting an artefact of one partition.
 
 ## 7. Limitations
@@ -635,7 +670,7 @@ These are not boilerplate. Each one materially constrains what the results above
 2. **No external validation, and none obtainable from the obvious source.** Every estimate is internal to these 200 patients. Internal cross-validation systematically overstates the performance a model would show in a new population, and no correction applied here changes that. The natural remedy - validating against the larger 2015 UCI release, which shares this file's variable vocabulary - is unavailable: section 5.14 shows the two share their patients. The provenance gate blocks that dataset from every external-validation table, so this limitation is enforced rather than merely stated.
 3. **Hospital-based, single-centre sampling.** These patients are not a random sample of any population. The 64.0% CKD prevalence is a property of who was recruited, not of any community. Selection bias is likely and its direction is unknown.
 4. **Case-mix (spectrum) bias - the most consequential limitation.** 107 of 128 CKD patients (84%) have stage s3-s5 disease, so the dataset largely contrasts established kidney failure with comparatively healthy controls. Discrimination measured on such a sample is systematically optimistic for screening use. Section 5.5 shows sensitivity for the low-cost model falling from 0.969 overall to 0.905 among early-stage CKD patients, and the clinical-only model from 0.891 to 0.762. **No headline figure in this report should be read as an estimate of screening performance.**
-5. **Pre-discretised predictors.** The published file contains only binned intervals. Real continuous values are unrecoverable, open-ended tail bins are compressed to their finite edge, and the effective measurement precision of every variable is unknown. A model built on continuous measurements might perform differently in either direction.
+5. **Pre-discretised predictors - now measured rather than assumed.** The published file contains only binned intervals, and open-ended tail bins are compressed to their finite edge. Section 5.15 quantifies the consequence using the recovered measurements: for every variable except serum creatinine the encoding costs at most 0.0700 univariate ROC-AUC, while serum creatinine loses 0.2662. The same section shows that 339 cells the source leaves blank carry constant values here. Both are properties of the release that no analysis of the released file alone could detect, and both are now bounded rather than speculated about.
 6. **No data dictionary.** The dataset ships without variable definitions [4]. 10 variables have interpretations that could not be settled from the file and are flagged as uncertain rather than resolved by assumption. The tiering of `ane` in particular changes what 'low cost' means, and was decided conservatively.
 7. **Minimal demographic information.** Age is present, in bands. There is no sex, no ethnicity, no socioeconomic indicator, no comorbidity detail beyond three binary flags. Subgroup performance therefore cannot be assessed at all, and undetected differential performance across groups is entirely possible.
 8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Section 5.13 quantifies both readings: **deleting** them changes nothing (largest |delta ROC-AUC| 0.0025), but **trusting the staging instead of the label** costs the low-cost configuration up to 0.0241 ROC-AUC against at most 0.0022 for the laboratory configuration. Label noise is therefore not a negligible source of uncertainty for the cheap model specifically, and this limitation is only half answered.
@@ -711,7 +746,44 @@ What the study does not support is any claim about clinical utility, causality, 
 
 *No reference above was generated without verification; each has a DOI or a stable arXiv identifier. The prior-work survey table additionally distinguishes, per study, which facts were verified from full text or abstract and which are attributed to the comparison table of [11] pending hand verification.*
 
-## Appendix A. Generated artefacts
+## Appendix A. TRIPOD+AI checklist
+
+Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 partly, 1 adapted (the study is a benchmark re-analysis, not model development), and 2 not applicable. Items that are only partly met say so; the checklist is an audit, not a compliance claim.
+
+| # | Section | Item | Status | Evidence |
+|---:|---|---|---|---|
+| 1 | Title | Title | **adapted** | Title identifies a re-analysis of a benchmark rather than model development; the study evaluates measurement properties, not a model for deployment. Deviation is deliberate and stated in the study-type box. |
+| 2 | Abstract | Abstract | **satisfied** | Report abstract: background (literature survey), objective, methods, results per mechanism, conclusions. |
+| 3 | Introduction | Background | **satisfied** | Section 1, with the clinical context and the benchmark-quality rationale. |
+| 4 | Introduction | Objectives | **satisfied** | Section 2: three mechanisms as primary objectives, four supporting questions. |
+| 5 | Methods | Data source | **satisfied** | Section 3.1, including the provenance contradiction and its consequences. |
+| 6 | Methods | Participants | **partly** | Sections 3.1 and 3.3. The released file documents no eligibility criteria, and the provenance check shows the stated setting is unverified. Reported as a limitation rather than resolved. |
+| 7 | Methods | Data preparation | **satisfied** | Sections 3.2, 3.4 and 4.4; fold-wise median imputation. Section 5.15 additionally audits the imputation performed by the data provider before release. |
+| 8 | Methods | Outcome | **partly** | Section 3.3 and limitation 9: the outcome is CKD status as labelled; chronicity cannot be verified from a cross-sectional record. |
+| 9 | Methods | Predictors | **satisfied** | src/ckd/features/configs.py: one VariableSpec per column with tier and rationale; 10 flagged uncertain, of which 2 are resolved in section 5.15. |
+| 10 | Methods | Sample size | **satisfied** | Section 3.3: fixed by the released file; events per predictor reported (2.88) against Riley et al. See limitation 1. |
+| 11 | Methods | Missing data | **satisfied** | Fold-wise median imputation inside training folds only; verified by TestNoPreprocessingOnFullData. |
+| 12 | Methods | Analytical methods | **satisfied** | Sections 4.2 and 4.3: 6 model families, repeated nested stratified CV (5 outer x 4 inner, 5 repeats). |
+| 13 | Methods | Class imbalance | **satisfied** | Not addressed by resampling, deliberately: imbalance is mild (64/36) and synthetic oversampling at n=200 would manufacture structure. A test forbids SMOTE-style methods. |
+| 14 | Methods | Model output | **satisfied** | Predicted probability; calibration reported in section 5.6 including non-identified slopes. |
+| 15 | Methods | Performance measures | **satisfied** | Section 4.5: discrimination, classification at prespecified and screening thresholds, calibration (slope, intercept, Brier, ECE), net benefit (exploratory). |
+| 16 | Methods | Model updating | **satisfied** | Sections 4.5 and 5.6: none / Platt / isotonic, each fitted inside training folds only. |
+| 17 | Methods | Fairness | **partly** | Section 5.5 reports stage-based subgroup performance. Demographic subgroup analysis is impossible: the file carries no sex, ethnicity or socioeconomic variables. Limitation 7 states this as a reason for caution. |
+| 18 | Methods | Explainability | **satisfied** | Section 5.7 (permutation and SHAP importance with stability statistics) and 5.12 (EBM shape functions with a documented suppression term). |
+| 19 | Results | Participants | **satisfied** | Sections 3.3 to 3.5, figure E1, table 00. |
+| 20 | Results | Model development | **satisfied** | Sections 5.9 and 5.10 with table 16; the prespecified rule's pick is reported alongside an explicit argument for not endorsing it. |
+| 21 | Results | Model performance | **satisfied** | Sections 5.2 to 5.4 and 5.8; patient-level stratified bootstrap, 2000 resamples. |
+| 22 | Results | Model updating | **satisfied** | Section 5.6, calibration method comparison. |
+| 23 | Discussion | Interpretation | **satisfied** | Section 6. |
+| 24 | Discussion | Limitations | **satisfied** | Section 7: 13 limitations, several quantified rather than asserted. |
+| 25 | Discussion | Usability | **satisfied** | Section 8 and the study-type box: the work makes no deployment claim and states why the sample cannot support one. |
+| 26 | Other | Data availability | **satisfied** | Section 9 and README; the analysed file is CC BY 4.0, checksummed, never modified. |
+| 27 | Other | Code availability | **satisfied** | The repository is the artefact; every number is generated by scripts/ from data/. |
+| 28 | Other | Funding | **not-applicable** | No external funding; recorded so the omission is visible rather than accidental. |
+| 29 | Other | Conflicts of interest | **not-applicable** | None. |
+| 30 | Other | Protocol or registration | **partly** | The analysis design (seed, folds, thresholds, selection rule) is fixed in config/experiment.yaml and was not changed after results were seen; analyses added later are labelled EXPLORATORY and post hoc. No public preregistration exists. |
+
+## Appendix B. Generated artefacts
 
 **Figures** (`reports/figures/`, 300 dpi PNG and PDF)
 
@@ -780,3 +852,6 @@ What the study does not support is any claim about clinical utility, causality, 
 - `table_32_imputation_audit.csv`
 - `table_33_sc_bin_structure.csv`
 - `table_34_blood_pressure_recovery.csv`
+- `table_35_binned_vs_continuous.csv`
+- `table_36_tripod_ai.csv`
+- `table_36_tripod_ai_summary.csv`
