@@ -4,6 +4,70 @@ Newest entries at the top. One entry per work session / phase milestone.
 
 ---
 
+## 2026-08-22 — Phase 3d COMPLETE + 5a. Three findings, one of which cuts against our own thesis.
+
+Commits `59f5ae5`, `00d9843`. Full suite **345 passed**.
+
+User asked to proceed with everything not dependent on external
+validation. 3d was the highest-value unblocked item because the Phase 0
+overlap finding turned it from a cross-cohort comparison into a
+**within-cohort** one: the same 187 uniquely pinned patients in two
+representations, so no population shift or case mix can confound it.
+
+**Finding 1 — the binning cost is concentrated in the one variable that
+matters most.** Every recoverable variable except serum creatinine loses
+≤0.07 univariate ROC-AUC to the interval encoding. `sc` loses **0.2662**
+(0.946 → 0.680). The published bin `< 3.65` absorbs 137 of 177 patients
+and spans 0.5–3.6 mg/dL — normal through severe impairment — and is only
+52% CKD, while every other bin is 100% CKD. In this release creatinine is
+not a graded measurement but a flag that fires only once it is extreme.
+
+Consequence recorded in the report: this study excluded `grf` but retained
+`sc`, and that judgement is comfortable **only because binning flattened
+the variable**. On the underlying measurements `sc` alone reaches 0.946 —
+close to the quantity defining the outcome. A study on the continuous
+release would have to defend that inclusion much harder, and could not
+know it from this file.
+
+**Finding 2 — the release imputed missing data with constants.** 339 cells
+the source leaves blank carry values here, and for **all 13** variables
+every such cell got a *single* constant — in each case the clinical normal
+range. Missingness is strongly outcome-associated (OR 3–31), so normal
+values were supplied to the patients most likely to be ill, invisibly.
+
+**This one deflates rather than inflates**, and the report says so
+explicitly: it makes the classes harder to separate, so it cannot be
+enlisted in the "everything flatters" argument. Reported because it is
+true and because anyone deciding whether to trust the dataset needs it.
+
+**Finding 3 — model-level: nothing changes.** Stage 12 ran both arms under
+identical design/seeds/pipelines. Largest difference **0.0122 ROC-AUC**,
+an order of magnitude inside the bootstrap intervals. That null is more
+interesting than a difference: `sc` gains 0.27 AUC alone, and the
+multivariable models do not benefit, because haemoglobin (0.968) and PCV
+already carry the information. *You can destroy the resolution of the most
+diagnostic analyte in the dataset and the models will not notice.* It
+rules out "the binning explains the ceiling" — the case mix does.
+
+**By-product:** two `uncertain` variables resolved from evidence —
+`bp (Diastolic)` is a diastolic ≥80 mmHg indicator; `bp limit` bands
+≤70 / exactly 80 / ≥90. Three further data-entry inconsistencies found.
+
+**Also (5a):** TRIPOD+AI checklist as Appendix A — 30 items, 23 satisfied,
+4 partly, 1 adapted, 2 n/a. `partly`/`not-satisfied` are visible values so
+it audits rather than asserts compliance.
+
+**Gating:** stages 11 and 12 refuse to run unless the provenance verdict
+is SAME-SOURCE — recovering one cohort's values from another is only
+legitimate when they are the same patients.
+
+**Still open:** icddr,b request (3e); 3a–3c on th_uae/birdem/mimic (need
+the 3b′ dataset-parameterized refactor); Phase 4 (encoding robustness,
+capacity threshold, whole-procedure bootstrap, calibration experiment);
+5b/5c (lock file, CI); 10 prior-work rows behind paywalls.
+
+---
+
 ## 2026-08-22 — Phase 2 COMPLETE: the paper is now a three-mechanisms methods paper
 
 Commit `07713b8`. Full suite **324 passed**.
