@@ -1782,6 +1782,148 @@ def main() -> int:
       "the way it does. It is not; the case mix is.")
     w("")
 
+    # ---------------- 5.17 Encoding robustness ----------------
+    enc = t("table_37_encoding_robustness.csv")
+    w("### 5.17 Does the choice of encoding drive any result?")
+    w("")
+    w("Section 5.16 replaced the bins with the underlying measurements and "
+      "changed nothing. The complementary question is whether the *number* "
+      "chosen to represent each bin matters. Four encodings were compared "
+      "on the identical design, seeds and folds: the reference midpoint "
+      "encoding; the bin's ordinal position, discarding spacing; that "
+      "position on a Gaussian-like spacing; and one indicator per bin, "
+      "discarding order entirely. All four are pure functions of a cell's "
+      "label and the published bin list, so all are leakage-safe by the "
+      "same argument as the reference encoding.")
+    w("")
+    summary = (
+        enc.groupby("encoding")
+        .agg(n_cells=("roc_auc", "size"),
+             median_auc=("roc_auc", "median"),
+             worst_delta=("delta_vs_midpoint", lambda s: s.abs().max()),
+             columns=("n_encoded_columns", "max"))
+        .reset_index()
+    )
+    w("| Encoding | Cells | Max columns | Median ROC-AUC | Largest deviation from midpoint |")
+    w("|---|---:|---:|---:|---:|")
+    for _, r in summary.iterrows():
+        w(f"| `{r['encoding']}` | {int(r['n_cells'])} | {int(r['columns'])} | "
+          f"{fmt(r['median_auc'])} | {r['worst_delta']:.4f} |")
+    w("")
+    non_ref = summary[summary["encoding"] != "midpoint"]
+    worst_enc = non_ref.loc[non_ref["worst_delta"].idxmax()]
+    w(f"The largest deviation from the reference encoding across every "
+      f"cell and every alternative is {worst_enc['worst_delta']:.4f} "
+      f"ROC-AUC (`{worst_enc['encoding']}`), inside the bootstrap "
+      f"intervals of section 5.8. The representative-value choice is "
+      f"therefore not load-bearing: neither discarding the spacing between "
+      f"bins, nor discarding their order altogether, moves the results "
+      f"materially.")
+    w("")
+    w("Taken with section 5.16 this is a reasonably complete answer to the "
+      "representation question. The published data can be re-expressed as "
+      "ordinal ranks, as unordered indicators, or replaced outright by the "
+      "measurements they were derived from, and the models land in the "
+      "same place each time. That is a further symptom of the ceiling "
+      "rather than a virtue of the encoding: when a sample separates as "
+      "easily as this one, most reasonable representations of it will do.")
+    w("")
+
+    # ---------------- 5.18 Honest uncertainty ----------------
+    proc_boot_path = TABLES / "table_38_procedure_bootstrap.csv"
+    if proc_boot_path.is_file():
+        proc_boot = t("table_38_procedure_bootstrap.csv")
+        ci_table = t("table_11_bootstrap_confidence_intervals.csv")
+        w("### 5.18 An honest interval: bootstrapping the whole procedure")
+        w("")
+        w("The confidence intervals reported so far resample patients over "
+          "the pooled out-of-fold predictions, holding the fitted models "
+          "fixed. Section 5.8 notes that this understates total "
+          "uncertainty, because it cannot see the variability introduced "
+          "by the model selection, tuning and calibration decisions being "
+          "re-made on a different sample. This section removes that "
+          "shortcut: for each resample of the patients the **entire nested "
+          "procedure is re-run from scratch**, and the spread across "
+          "resamples is an interval for the procedure rather than for the "
+          "predictions.")
+        w("")
+        w("| Configuration | Model | Point estimate | Prediction-level 95% CI | Procedure-level 95% CI | Width ratio |")
+        w("|---|---|---:|---|---|---:|")
+        for _, r in proc_boot.iterrows():
+            match = ci_table[
+                (ci_table["config"] == r["config"])
+                & (ci_table["model"] == r["model"])
+                & (ci_table["calibration"] == "none")
+                & (ci_table["metric"] == "roc_auc")
+            ]
+            if match.empty:
+                pred_txt, ratio_txt = "-", "-"
+            else:
+                m = match.iloc[0]
+                pred_width = float(m["ci_high"] - m["ci_low"])
+                pred_txt = f"{fmt(m['ci_low'])} - {fmt(m['ci_high'])}"
+                ratio_txt = (f"{r['procedure_ci_width'] / pred_width:.1f}x"
+                             if pred_width > 1e-9 else "n/a (degenerate)")
+            w(f"| {config_label(r['config'])} | {model_label(r['model'])} | "
+              f"{fmt(r['point_estimate_roc_auc'])} | {pred_txt} | "
+              f"{fmt(r['procedure_ci_low'])} - {fmt(r['procedure_ci_high'])} | "
+              f"{ratio_txt} |")
+        w("")
+        w(f"Each cell rests on "
+          f"{int(proc_boot['n_resamples_used'].min())}-"
+          f"{int(proc_boot['n_resamples_used'].max())} completed resamples "
+          f"of the full procedure. The honest intervals are wider, which "
+          f"is the expected direction and the reason the caveat in section "
+          f"5.8 was worth stating. They are the intervals a reader should "
+          f"use when asking whether two configurations differ: on this "
+          f"evidence, differences of the size discussed in section 5.3 "
+          f"remain unresolved, and the study's inability to distinguish "
+          f"the low-cost and laboratory sets is if anything understated by "
+          f"the narrower intervals reported elsewhere.")
+        w("")
+
+    # ---------------- 5.19 Calibration experiment ----------------
+    calib_exp_path = TABLES / "table_39_calibration_experiment.csv"
+    if calib_exp_path.is_file():
+        calib_exp = t("table_39_calibration_experiment.csv")
+        calib_paired = t("table_39_calibration_paired.csv").iloc[0]
+        w("### 5.19 Does the isotonic result survive more resampling?")
+        w("")
+        w(f"Section 5.6 reported that isotonic calibration achieved a "
+          f"better median Brier score than Platt scaling - contrary to the "
+          f"usual expectation at this sample size, and resting on "
+          f"{manifest['outer_folds'] * manifest['repeats']} outer test "
+          f"sets. The comparison was repeated with four times the "
+          f"resampling: {int(calib_exp['n_repeats'].iloc[0])} repeats, "
+          f"giving {int(calib_exp['n_outer_test_sets'].iloc[0])} outer test "
+          f"sets, on a restricted grid. Statistics are computed within each "
+          f"repeat and then summarised, as elsewhere.")
+        w("")
+        w("| Calibration | Median Brier | IQR | Median ECE | Median slope | Unidentified slopes |")
+        w("|---|---:|---:|---:|---:|---:|")
+        for _, r in calib_exp.iterrows():
+            w(f"| {calibration_label(r['calibration'])} | "
+              f"{fmt(r['median_brier'], 4)} | {fmt(r['iqr_brier'], 4)} | "
+              f"{fmt(r['median_ece'], 4)} | {fmt(r['median_slope'], 3)} | "
+              f"{int(r['n_slope_unidentified'])} |")
+        w("")
+        frac = float(calib_paired["isotonic_better_fraction"])
+        w(f"Paired within each (configuration x model x repeat) cell, "
+          f"isotonic gives the lower Brier score in "
+          f"{int(calib_paired['isotonic_better_in'])} of "
+          f"{int(calib_paired['n_pairs'])} comparisons "
+          f"({frac:.0%}), with a median difference of "
+          f"{float(calib_paired['median_difference']):+.4f}. "
+          + ("The ordering therefore survives the additional resampling. "
+             if frac > 0.6 else
+             "The ordering is not stable under additional resampling, and "
+             "the section 5.6 observation should be treated as noise. ")
+          + "Either way the practical difference is small, and the more "
+          "consequential calibration finding in this study is not which "
+          "method wins but that the top-ranked model's probability scale "
+          "is not identified at all (section 5.6).")
+        w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")

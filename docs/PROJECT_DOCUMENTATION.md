@@ -454,6 +454,39 @@ recommendation to use anything.
 
 ## Part 3 — Next course of action
 
+> **Status note (2026-08-22).** This roadmap was written before the study was
+> reframed. Most of it has since been executed, and one item was answered in
+> a way that changed the paper. Current status of every item:
+>
+> | Item | Status | Where |
+> |---|---|---|
+> | N1 external validation | **Blocked, and the reason is a finding.** The intended cohort (UCI-2015) turned out to share our patients; the provenance gate now blocks it. Genuine external validation needs icddr,b (restricted). | §5.14, `reports/external/provenance_report.md` |
+> | N2 prospective series | Not started; still the only route to a clinical claim | — |
+> | N3 recover continuous values | **Done**, and better than planned: same-cohort rather than cross-cohort | §5.15–5.16, stages 11–12 |
+> | N4 label robustness | **Done**; produced a finding that qualifies the low-cost claim | §5.13, stage 8 |
+> | N5 encoding robustness | **Done** | §5.17, stage 14 |
+> | N6 whole-procedure bootstrap | **Done** | §5.18, stage 15 |
+> | N7 operating point as a decision | **Deliberately not done** — see below | — |
+> | N8 readable low-cost rule | **Done**; found a suppression term | §5.12, stage 10 |
+> | N9 calibration experiment | **Done** (20 repeats; beta calibration not added) | §5.19, stage 16 |
+> | N10 optimism | **Done** | §5.11, stage 9 |
+> | N11 TRIPOD+AI | **Done** | Appendix A, stage 13 |
+> | N12 archive and pin | **Done** | `requirements.lock.txt`, `scripts/make_archive.py`, `CITATION.cff` |
+> | N13 continuous integration | **Done** | `.github/workflows/ci.yml` |
+> | N14 pre-registration | Not started (depends on N2) | — |
+>
+> **Why N7 was dropped.** It asked for a referral-capacity constraint to turn
+> the operating point into a deployment decision. That made sense when the
+> study was framed as screening feasibility. After the reframe it would
+> reintroduce exactly the deployment framing the paper removes, on a sample
+> that is not a screening series — and its methodological content (derive the
+> threshold inside training folds) is already design decision (d). Dropped
+> deliberately rather than silently.
+>
+> Two items were added that this roadmap did not anticipate, both consequences
+> of the provenance finding: the prior-work survey (stage 7) and the
+> pseudo-external-validation analysis (§5.14).
+
 Ordered by how much each would change what the study can claim, not by effort.
 
 ### Tier 1 — changes the scientific standing
