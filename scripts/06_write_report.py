@@ -1297,11 +1297,72 @@ def main() -> int:
           f"the two must be reported separately.")
         w("")
 
+    # ---------------- 5.13 Readable rule ----------------
+    ebm_cmp = t("table_28_ebm_vs_svm.csv")
+    shape_summary = t("table_28_ebm_shape_summary.csv")
+    w("### 5.12 A readable rule at the same cost (EBM versus SVM)")
+    w("")
+    w("The model the prespecified rule selects is an RBF SVM, which is "
+      "accurate and opaque. At identical cost - the same 11 history, "
+      "examination and dipstick variables - the explainable boosting "
+      "machine is a pure additive model (`interactions=0`) whose "
+      "per-variable shape functions can be read and challenged:")
+    w("")
+    w("| Model | Calibration | ROC-AUC | Brier | Calibration slope | Sensitivity | Readable shape functions |")
+    w("|---|---|---:|---:|---:|---:|---|")
+    for _, r in ebm_cmp.iterrows():
+        slope = (fmt(r["calibration_slope"], 3)
+                 if np.isfinite(r["calibration_slope"]) else "not identified")
+        w(f"| {model_label(r['model'])} | {calibration_label(r['calibration'])} | "
+          f"{fmt(r['roc_auc'])} | {fmt(r['brier'], 4)} | {slope} | "
+          f"{fmt(r['sensitivity'], 3)} | "
+          f"{'yes' if r['readable_shape_functions'] else 'no'} |")
+    w("")
+    ebm_iso = ebm_cmp[(ebm_cmp["model"] == "ebm")
+                      & (ebm_cmp["calibration"] == "isotonic")].iloc[0]
+    svm_iso = ebm_cmp[(ebm_cmp["model"] == "svm")
+                      & (ebm_cmp["calibration"] == "isotonic")].iloc[0]
+    w(f"The EBM gives up {svm_iso['roc_auc'] - ebm_iso['roc_auc']:.4f} "
+      f"ROC-AUC against the SVM - far inside the bootstrap intervals of "
+      f"either - and buys with it a calibration slope of "
+      f"{fmt(ebm_iso['calibration_slope'], 3)} against "
+      f"{fmt(svm_iso['calibration_slope'], 3)}, i.e. a probability scale "
+      f"that needs essentially no correction. Where the study must choose "
+      f"between the best-discriminating model and the best-explainable one "
+      f"at equal cost, the evidence does not force the trade-off it is "
+      f"usually assumed to: on this sample the readable model is also the "
+      f"better-calibrated one.")
+    w("")
+    w("Figure R13 plots the fitted shape functions, averaged over the 25 "
+      "outer folds. Their directions are clinically coherent and, for "
+      "`appet`, independently confirm a coding polarity that the released "
+      "file never documented (see section 3.6): low urine specific gravity "
+      "raises risk (impaired concentrating ability), albuminuria raises it "
+      "steeply, and diabetes, hypertension, oedema and poor appetite all "
+      "push the same way.")
+    w("")
+    disagreeing = shape_summary[~shape_summary["direction_agrees"]]
+    if len(disagreeing):
+        names = ", ".join(f"`{f}`" for f in disagreeing["feature"])
+        w(f"**One term must not be read on its own.** {names} runs opposite "
+          f"to its own marginal association (shape Spearman "
+          f"{disagreeing.iloc[0]['shape_spearman_rho']:+.3f} against signed "
+          f"univariate ROC-AUC "
+          f"{disagreeing.iloc[0]['signed_univariate_auc']:.3f}). That is a "
+          f"suppression effect rather than an error: the binary diastolic "
+          f"flag sits beside `bp limit` and `htn`, which carry the "
+          f"hypertension signal, so its residual contribution changes sign. "
+          f"It is recorded in `table_28_ebm_shape_notes.txt` and is a "
+          f"concrete illustration of the interpretation limit stated in "
+          f"section 5.7: an additive model is readable term by term only "
+          f"where its terms are not proxies for one another.")
+        w("")
+
     # ---------------- 5.12 Label robustness ----------------
     labels = t("table_27_label_robustness.csv")
     excl = labels[labels["variant"] == "exclude_inconsistent"]
     flip = labels[labels["variant"] == "flip_inconsistent"]
-    w("### 5.12 Label robustness (the four internally inconsistent records)")
+    w("### 5.13 Label robustness (the four internally inconsistent records)")
     w("")
     w(f"Four patients are labelled `notckd` while carrying an advanced CKD "
       f"stage and an eGFR below 60 (CSV lines 12, 18, 52, 123). Because "
@@ -1496,7 +1557,7 @@ def main() -> int:
       "patients are labelled `notckd` while carrying an advanced CKD stage and "
       "an eGFR below 60. Either the label or the staging is wrong for those "
       "records, and there is no external source of truth to arbitrate. "
-      "Section 5.12 quantifies both readings: **deleting** them changes "
+      "Section 5.13 quantifies both readings: **deleting** them changes "
       f"nothing (largest |delta ROC-AUC| {max_excl:.4f}), but **trusting "
       f"the staging instead of the label** costs the low-cost configuration "
       f"up to {abs(lc_flip.min()):.4f} ROC-AUC against at most "

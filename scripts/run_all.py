@@ -88,6 +88,8 @@ def main() -> int:
                                          "Stage 8: label-robustness comparison")
     timings["09 optimism"] = run([py, "scripts/09_optimism.py"],
                                  "Stage 9: optimism accounting")
+    timings["10 EBM shapes"] = run([py, "scripts/10_ebm_shapes.py"],
+                                   "Stage 10: readable low-cost rule (EBM shapes)")
     timings["06 report"] = run([py, "scripts/06_write_report.py"],
                                "Stage 6: assemble the research report")
     timings["notebook"] = run([py, "scripts/make_notebook.py"],

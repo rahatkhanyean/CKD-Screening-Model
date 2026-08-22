@@ -1,0 +1,12 @@
+feature,shape_spearman_rho,signed_univariate_auc,univariate_direction_determined,direction_agrees,mean_abs_contribution
+al,0.9997,0.8281,True,True,5.7904
+sg,-0.9999,0.1118,True,True,5.2051
+dm,0.9843,0.7734,True,True,3.2349
+htn,0.9843,0.8047,True,True,2.633
+pe,0.9843,0.6367,True,True,1.9695
+appet,0.9843,0.6562,True,True,1.9455
+age,0.0154,0.6609,True,True,1.61
+cad,0.9843,0.5859,True,True,1.2197
+su,0.9995,0.6172,True,True,1.1093
+bp limit,0.7286,0.6344,True,True,0.6761
+bp (Diastolic),-0.9843,0.553,True,False,0.1642

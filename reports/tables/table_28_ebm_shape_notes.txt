@@ -1,0 +1,12 @@
+EBM shape-function notes (low-cost configuration)
+====================================================
+
+Each low-cost feature's fitted shape function is compared with its
+signed univariate association. Agreement means the term can be read
+on its own; disagreement means the term is a suppression effect,
+interpretable only jointly with the correlated variables it sits
+beside. Both are reported; neither is silently corrected.
+
+DIRECTION DISCREPANCIES (1):
+  - bp (Diastolic): shape rho -0.984 but signed univariate AUC 0.553. The fitted effect runs opposite to the marginal association; this term must not be read in isolation.
+

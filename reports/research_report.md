@@ -464,7 +464,24 @@ The largest ROC-AUC optimism across these cells is +0.0072. That optimism is thi
 
 One asymmetry is worth recording: resubstitution is guaranteed to flatter *rank order* (the AUC optimism above is non-negative in every cell), but not the *probability scale*. In 1 cell(s) the apparent Brier score is actually worse than the nested one (Laboratory x SVM (RBF) (0.0399 vs 0.0276)), because the averaged out-of-fold probabilities are better placed on the probability scale than a single resubstitution fit's. Discrimination and calibration do not inflate together, which is one more reason the two must be reported separately.
 
-### 5.12 Label robustness (the four internally inconsistent records)
+### 5.12 A readable rule at the same cost (EBM versus SVM)
+
+The model the prespecified rule selects is an RBF SVM, which is accurate and opaque. At identical cost - the same 11 history, examination and dipstick variables - the explainable boosting machine is a pure additive model (`interactions=0`) whose per-variable shape functions can be read and challenged:
+
+| Model | Calibration | ROC-AUC | Brier | Calibration slope | Sensitivity | Readable shape functions |
+|---|---|---:|---:|---:|---:|---|
+| EBM (GAM) | Uncalibrated | 0.988 | 0.0270 | 0.813 | 0.961 | yes |
+| EBM (GAM) | Isotonic | 0.987 | 0.0276 | 1.009 | 0.961 | yes |
+| SVM (RBF) | Uncalibrated | 0.991 | 0.0210 | 2.227 | 0.969 | no |
+| SVM (RBF) | Isotonic | 0.993 | 0.0192 | 1.257 | 0.969 | no |
+
+The EBM gives up 0.0066 ROC-AUC against the SVM - far inside the bootstrap intervals of either - and buys with it a calibration slope of 1.009 against 1.257, i.e. a probability scale that needs essentially no correction. Where the study must choose between the best-discriminating model and the best-explainable one at equal cost, the evidence does not force the trade-off it is usually assumed to: on this sample the readable model is also the better-calibrated one.
+
+Figure R13 plots the fitted shape functions, averaged over the 25 outer folds. Their directions are clinically coherent and, for `appet`, independently confirm a coding polarity that the released file never documented (see section 3.6): low urine specific gravity raises risk (impaired concentrating ability), albuminuria raises it steeply, and diabetes, hypertension, oedema and poor appetite all push the same way.
+
+**One term must not be read on its own.** `bp (Diastolic)` runs opposite to its own marginal association (shape Spearman -0.984 against signed univariate ROC-AUC 0.553). That is a suppression effect rather than an error: the binary diastolic flag sits beside `bp limit` and `htn`, which carry the hypertension signal, so its residual contribution changes sign. It is recorded in `table_28_ebm_shape_notes.txt` and is a concrete illustration of the interpretation limit stated in section 5.7: an additive model is readable term by term only where its terms are not proxies for one another.
+
+### 5.13 Label robustness (the four internally inconsistent records)
 
 Four patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60 (CSV lines 12, 18, 52, 123). Because there is no external source of truth to arbitrate, they are kept in the primary analysis and interrogated here instead: the headline cells were re-run with those records **excluded**, and again with their labels **flipped** to `ckd`.
 
@@ -516,7 +533,7 @@ These are not boilerplate. Each one materially constrains what the results above
 5. **Pre-discretised predictors.** The published file contains only binned intervals. Real continuous values are unrecoverable, open-ended tail bins are compressed to their finite edge, and the effective measurement precision of every variable is unknown. A model built on continuous measurements might perform differently in either direction.
 6. **No data dictionary.** The dataset ships without variable definitions [4]. 10 variables have interpretations that could not be settled from the file and are flagged as uncertain rather than resolved by assumption. The tiering of `ane` in particular changes what 'low cost' means, and was decided conservatively.
 7. **Minimal demographic information.** Age is present, in bands. There is no sex, no ethnicity, no socioeconomic indicator, no comorbidity detail beyond three binary flags. Subgroup performance therefore cannot be assessed at all, and undetected differential performance across groups is entirely possible.
-8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Section 5.12 quantifies both readings: **deleting** them changes nothing (largest |delta ROC-AUC| 0.0025), but **trusting the staging instead of the label** costs the low-cost configuration up to 0.0241 ROC-AUC against at most 0.0022 for the laboratory configuration. Label noise is therefore not a negligible source of uncertainty for the cheap model specifically, and this limitation is only half answered.
+8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Section 5.13 quantifies both readings: **deleting** them changes nothing (largest |delta ROC-AUC| 0.0025), but **trusting the staging instead of the label** costs the low-cost configuration up to 0.0241 ROC-AUC against at most 0.0022 for the laboratory configuration. Label noise is therefore not a negligible source of uncertainty for the cheap model specifically, and this limitation is only half answered.
 9. **Cross-sectional data, no chronicity.** CKD is defined by abnormalities persisting beyond three months [2]. A single record cannot establish chronicity, so the outcome label itself rests on information not present in the file.
 10. **Prevalence-dependent metrics.** PPV and NPV reported here hold only at this sample's 64.0% prevalence and do not transfer to a community screening setting.
 11. **Linearity assumption for the linear models.** Ordinal bin representatives are entered on their original scale, so logistic regression and the SVM assume an approximately monotone, roughly linear relationship with the log-odds across bins. The tree ensembles and the EBM do not make this assumption.
@@ -599,6 +616,7 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `fig_r10_shap_capable_importance_stability.png`
 - `fig_r11_shap_capable_shap_vs_permutation.png`
 - `fig_r12_spectrum_effect.png`
+- `fig_r13_ebm_shapes.png`
 - `fig_r1_auc_heatmap.png`
 - `fig_r2_leakage_audit.png`
 - `fig_r3_screening_metrics.png`
@@ -643,4 +661,7 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `table_26_prior_work.csv`
 - `table_26_prior_work_summary.csv`
 - `table_27_label_robustness.csv`
+- `table_28_ebm_shape_functions.csv`
+- `table_28_ebm_shape_summary.csv`
+- `table_28_ebm_vs_svm.csv`
 - `table_29_optimism.csv`
