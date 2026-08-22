@@ -83,6 +83,13 @@ def one_resample(
         preds, _ = run_nested_cv(
             X_b, y_b, model_names=[model], config_names=[config],
             calibration_methods=["none"], settings=settings, verbose=0,
+            # A bootstrap sample contains the same patient several times.
+            # Grouping the outer folds by the ORIGINAL patient index keeps
+            # every copy of a patient on the same side of every split;
+            # without it a model would be tested on patients it trained on,
+            # and each replicate's estimate would be optimistic - which
+            # would narrow exactly the interval this stage exists to widen.
+            groups=rows,
         )
     except Exception as exc:  # a degenerate resample must not kill the run
         return {"config": config, "model": model, "seed": seed,

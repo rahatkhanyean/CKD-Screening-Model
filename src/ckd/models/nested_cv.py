@@ -40,7 +40,12 @@ import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import clone
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_predict
+from sklearn.model_selection import (
+    GridSearchCV,
+    StratifiedGroupKFold,
+    StratifiedKFold,
+    cross_val_predict,
+)
 
 from ..features.configs import get_config
 from .pipeline import assert_pipeline_is_clean, build_pipeline
@@ -102,6 +107,7 @@ def _run_one_repeat(
     repeat: int,
     settings: NestedCVSettings,
     feature_override: list[str] | None = None,
+    groups: Sequence[int] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Execute one full outer cross-validation pass. Returns (predictions, fold_info)."""
     spec = get_model(model_name)
@@ -117,16 +123,32 @@ def _run_one_repeat(
                else list(get_config(config_name).features))
     X = X.loc[:, columns]
 
-    outer = StratifiedKFold(
-        n_splits=settings.outer_folds,
-        shuffle=True,
-        random_state=_fold_seed(settings.seed, repeat, salt=1),
-    )
+    # ``groups`` keeps rows belonging to the same underlying patient in the
+    # same outer fold. It is None for every analysis on the released data,
+    # where each row IS a patient, so the reference behaviour is unchanged.
+    # It matters for resampled data (stage 15): a bootstrap sample contains
+    # duplicated patients, and splitting them across folds would let a model
+    # be tested on a patient it trained on - the very leakage this study is
+    # about.
+    if groups is None:
+        outer = StratifiedKFold(
+            n_splits=settings.outer_folds,
+            shuffle=True,
+            random_state=_fold_seed(settings.seed, repeat, salt=1),
+        )
+        split_args = (X, y)
+    else:
+        outer = StratifiedGroupKFold(
+            n_splits=settings.outer_folds,
+            shuffle=True,
+            random_state=_fold_seed(settings.seed, repeat, salt=1),
+        )
+        split_args = (X, y, np.asarray(groups))
 
     predictions: list[dict] = []
     fold_info: list[dict] = []
 
-    for fold, (train_idx, test_idx) in enumerate(outer.split(X, y)):
+    for fold, (train_idx, test_idx) in enumerate(outer.split(*split_args)):
         X_tr, X_te = X.iloc[train_idx], X.iloc[test_idx]
         y_tr, y_te = y[train_idx], y[test_idx]
 
@@ -226,6 +248,7 @@ def run_nested_cv(
     settings: NestedCVSettings,
     verbose: int = 1,
     feature_override: list[str] | None = None,
+    groups: Sequence[int] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run the full grid of (configuration x model x calibration x repeat).
 
@@ -254,7 +277,8 @@ def run_nested_cv(
         )
 
     results = Parallel(n_jobs=settings.n_jobs, verbose=5 if verbose else 0)(
-        delayed(_run_one_repeat)(X, y_arr, m, c, cal, r, settings, feature_override)
+        delayed(_run_one_repeat)(X, y_arr, m, c, cal, r, settings,
+                                 feature_override, groups)
         for (m, c, cal, r) in tasks
     )
 
