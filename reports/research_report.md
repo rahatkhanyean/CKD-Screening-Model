@@ -447,6 +447,21 @@ The mechanical rule selects Full valid / SVM (RBF) / Isotonic because it has the
 
 This preference is a statement about which result is better *evidenced*, not a recommendation to use anything. Neither model is validated for any clinical purpose, and section 5.5 shows that both are evaluated on a sample whose case mix flatters them.
 
+### 5.11 Apparent versus nested-CV performance (optimism)
+
+Fitting the identical selection procedure (inner grid search on ROC-AUC) on the complete dataset and evaluating on that same data gives the *apparent* performance; the difference from the pooled nested out-of-fold estimate is the optimism that internal validation is already correcting for:
+
+| Configuration | Model | Apparent ROC-AUC | Nested ROC-AUC | Optimism | Apparent Brier | Nested Brier |
+|---|---|---:|---:|---:|---:|---:|
+| Low-cost | SVM (RBF) | 0.9964 | 0.9909 | +0.0055 | 0.0173 | 0.0210 |
+| Low-cost | Random forest | 0.9993 | 0.9921 | +0.0072 | 0.0113 | 0.0301 |
+| Full valid | SVM (RBF) | 1.0000 | 1.0000 | +0.0000 | 0.0041 | 0.0069 |
+| Full valid | Random forest | 1.0000 | 0.9996 | +0.0004 | 0.0013 | 0.0168 |
+| Laboratory | SVM (RBF) | 0.9959 | 0.9951 | +0.0008 | 0.0399 | 0.0276 |
+| Laboratory | Random forest | 1.0000 | 0.9942 | +0.0058 | 0.0050 | 0.0328 |
+
+The largest ROC-AUC optimism across these cells is +0.0072. That optimism is this small for the same reason the valid models sit near the ceiling (section 5.5): the case mix leaves little room for resubstitution to exaggerate. On a harder problem the same procedure would show a much larger gap, so the small values here should be read as further evidence about the sample, not as evidence that validation discipline was unnecessary.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found two. Both push measured performance towards 1.0, and neither is clinical usefulness.
@@ -604,3 +619,4 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `table_24_provenance_evidence.csv`
 - `table_26_prior_work.csv`
 - `table_26_prior_work_summary.csv`
+- `table_29_optimism.csv`

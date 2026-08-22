@@ -1252,6 +1252,34 @@ def main() -> int:
       "sample whose case mix flatters them.")
     w("")
 
+    # ---------------- 5.11 Optimism ----------------
+    optimism = t("table_29_optimism.csv")
+    w("### 5.11 Apparent versus nested-CV performance (optimism)")
+    w("")
+    w("Fitting the identical selection procedure (inner grid search on "
+      "ROC-AUC) on the complete dataset and evaluating on that same data "
+      "gives the *apparent* performance; the difference from the pooled "
+      "nested out-of-fold estimate is the optimism that internal validation "
+      "is already correcting for:")
+    w("")
+    w("| Configuration | Model | Apparent ROC-AUC | Nested ROC-AUC | Optimism | Apparent Brier | Nested Brier |")
+    w("|---|---|---:|---:|---:|---:|---:|")
+    for _, r in optimism.iterrows():
+        w(f"| {config_label(r['config'])} | {model_label(r['model'])} | "
+          f"{fmt(r['apparent_roc_auc'], 4)} | {fmt(r['nested_roc_auc'], 4)} | "
+          f"{r['optimism_roc_auc']:+.4f} | {fmt(r['apparent_brier'], 4)} | "
+          f"{fmt(r['nested_brier'], 4)} |")
+    w("")
+    max_opt = float(optimism["optimism_roc_auc"].max())
+    w(f"The largest ROC-AUC optimism across these cells is "
+      f"{max_opt:+.4f}. That optimism is this small for the same reason the "
+      f"valid models sit near the ceiling (section 5.5): the case mix "
+      f"leaves little room for resubstitution to exaggerate. On a harder "
+      f"problem the same procedure would show a much larger gap, so the "
+      f"small values here should be read as further evidence about the "
+      f"sample, not as evidence that validation discipline was unnecessary.")
+    w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
