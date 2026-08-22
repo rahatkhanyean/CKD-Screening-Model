@@ -1,0 +1,594 @@
+# Reliable and Explainable Low-Cost CKD Screening in Bangladesh
+
+**A nested validation, leakage audit, and calibration study**
+
+*Generated 2026-08-22 by `scripts/06_write_report.py`. Every number in this document is injected directly from the computed tables in `reports/tables/`; none is transcribed by hand.*
+
+---
+
+> ### Study-type and safety statement
+>
+> This is an **internally validated, retrospective, single-centre methodological feasibility study**. It is **not a diagnostic tool**, and nothing in it should be used to make decisions about any patient. No claim is made about clinical utility, causality, deployment readiness or generalisability to any other population. **External and prospective validation would be required** before these findings could be considered clinically meaningful.
+
+---
+
+## Abstract
+
+**Background.** Chronic kidney disease (CKD) is common, largely asymptomatic until advanced, and disproportionately burdensome where laboratory access is limited. Whether inexpensive, routinely available information can support CKD screening is therefore a question worth asking - but published machine-learning studies on small CKD datasets frequently report near-perfect accuracy, which is a signature of target leakage rather than of clinical usefulness.
+
+**Objective.** To assess, under leakage-controlled repeated nested cross-validation, whether a small explainable model can predict CKD status from low-cost variables with useful sensitivity and calibrated risk estimates; and to quantify how much target leakage inflates apparent performance.
+
+**Methods.** 200 patient records (128 CKD, 72 non-CKD) collected at Enam Medical College, Savar, Bangladesh. All continuous variables were already discretised into interval bins in the released file. Six feature configurations were compared, including one **deliberately invalid** set containing an exact copy of the outcome (`affected`), the post-diagnosis stage label (`stage`) and the diagnostic eGFR quantity (`grf`). 6 model families (dummy, penalised logistic regression, random forest, support vector machine, XGBoost, explainable boosting machine) were evaluated under 5-fold outer / 4-fold inner nested stratified cross-validation repeated 5 times (25 outer test sets). Imputation, scaling, tuning, calibration and threshold selection were performed strictly within training folds, and prohibited columns were blocked programmatically by a guard that raises at fit and transform time. Uncalibrated, Platt and isotonic probabilities were compared. Confidence intervals come from a stratified patient-level bootstrap (2000 resamples).
+
+**Results.** The invalid leaky configuration reached ROC-AUC 1.000 (1.000-1.000). The best valid configuration reached 1.000 (1.000-1.000), i.e. the valid model is itself at the discrimination ceiling, so the gain from leakage measured against it is arithmetically near zero. Measured against baselines that still have headroom, leakage closes 100% of the remaining error for the low-cost set and 100% for the clinical-only set: it takes any configuration to 1.0. The low-cost configuration (history, examination and urine dipstick; 11 variables) achieved ROC-AUC 0.992 (0.981-0.999) versus 0.995 (0.988-0.999) for the laboratory-only configuration (14 variables). At the prespecified threshold of 0.50 the low-cost model reached sensitivity 0.961 (0.922-0.992) and negative predictive value 0.935 (0.878-0.986). Calibration of the best valid model was slope n/a, intercept 0.31. Feature-importance rankings were weakly concordant across the 25 outer folds (Kendall's W = 0.471).
+
+**A second, larger source of optimism was identified.** Even without any prohibited column, valid configurations sit close to the discrimination ceiling, and a post hoc case-mix analysis explains why: 107 of the 128 CKD patients (84%) are staged s3-s5, and haemoglobin alone separates the groups with univariate ROC-AUC 0.968. This is a contrast between advanced disease and comparatively healthy controls, not a screening series. Restricted to early CKD (s1-s2, n = 21) versus non-CKD, sensitivity at the prespecified threshold falls from 0.969 to 0.905 for the low-cost model and from 0.891 to 0.762 for the clinical-only model.
+
+**Conclusions.** Target leakage inflates apparent performance on this dataset, and case mix inflates it further and by more. Together these explain the near-perfect results commonly reported for this data far better than genuine screening ability does. Under leakage-controlled validation the low-cost variable set retains much of the discrimination available from laboratory measurements, but the headline figures should not be read as screening performance. These are internal, 200-patient, single-centre estimates with wide confidence intervals; they establish methodological feasibility only, and external and prospective validation in a genuine screening population would be required before any clinical claim could be made.
+
+## 1. Introduction
+
+Chronic kidney disease affects roughly 9% of the world's population and caused an estimated 1.2 million deaths in 2017, with the burden falling disproportionately on regions where diagnostic laboratory capacity is limited [1]. CKD is defined by abnormalities of kidney structure or function present for more than three months, operationalised principally through estimated glomerular filtration rate (eGFR) and albuminuria [2]. Because early CKD is largely asymptomatic, detection depends on testing rather than on presentation, which makes the cost and availability of the test a first-order determinant of who gets diagnosed.
+
+That motivates a specific technical question: how much of the discriminative information in a CKD assessment is carried by variables that cost almost nothing to obtain - history, physical examination, and a urine reagent strip - relative to variables that require venepuncture and a laboratory analyser?
+
+There is a well-documented hazard in answering this with machine learning on small clinical datasets. Published analyses of this particular dataset, and of CKD datasets generally, frequently report accuracy at or near 100%. Such results are rarely evidence of clinical usefulness; far more often they indicate that a predictor encodes the outcome. This dataset contains three such columns, and one of them is an exact copy of the label. A study that does not control for this cannot distinguish learning from lookup.
+
+This work therefore treats leakage control, honest validation and calibration as the primary objects of study, and treats predictive performance as something to be measured carefully rather than maximised. Reporting follows the spirit of TRIPOD+AI [3].
+
+## 2. Research questions
+
+**Primary.** Can a small, explainable model predict CKD status using inexpensive and routinely available patient information, while maintaining clinically useful sensitivity and calibrated risk estimates?
+
+**Secondary.**
+
+1. How much does target leakage inflate model performance?
+2. Can a reduced-feature model perform comparably to a laboratory-based model?
+3. Are predicted probabilities properly calibrated?
+4. Are the identified important predictors stable across resampling?
+5. How uncertain are the results, given only 200 patients?
+
+## 3. Dataset
+
+### 3.1 Source and provenance
+
+The analysis uses `ckd-dataset-v2.csv`, 200 patient records collected at Enam Medical College, Savar, Dhaka, Bangladesh. The same data are distributed by the UCI Machine Learning Repository as *Risk Factor Prediction of Chronic Kidney Disease* (creators Md. Ashiqul Islam and Shamima Akter), under CC BY 4.0 [4].
+
+- SHA-256 of the analysed file: `f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a`
+- Shape as read (header excluded): 202 x 29
+- After removing 2 metadata rows: **200 patients x 29 columns**
+
+The two rows immediately below the header are metadata, not observations: the first contains only the token `discrete` in every column, and the second declares `class` as the target and `meta` for `age`. Both are removed in exactly one place in the codebase (`src/ckd/data/load.py`), and the classification is verified rather than assumed.
+
+### 3.2 The decisive property: the data are already discretised
+
+Every continuous variable in the released file has been binned into interval strings before publication - `sg` as `1.019 - 1.021`, `bgr` as `< 112`, `grf` as `>= 227.944`. **The original measurements are not recoverable.** This information loss is a property of the published dataset, not a modelling choice, and it constrains everything that can be concluded from it. In particular, no analysis of this file can recover the resolution that a real eGFR or creatinine value would provide, and the effective measurement precision of every predictor is unknown.
+
+Each interval label is mapped to a single representative number: the midpoint for a closed bin, and the finite edge for an open-ended one. The mapping is a pure function of one cell's text - it uses no cross-row statistics and no outcome information - so it cannot transfer information between cross-validation folds, which is why it is the only transformation applied before splitting.
+
+### 3.3 Outcome and class balance
+
+The outcome is `class` (`ckd` / `notckd`): **128 CKD (64.0%) and 72 non-CKD (36.0%)**. The minority class provides 72 events; with 25 candidate predictors in the full valid configuration this is 2.88 events per predictor, far below both the traditional rule of thumb of 10 and the requirements of modern sample-size calculations for prediction models [5]. The study is therefore underpowered by construction, and is presented as a feasibility and methodology exercise rather than as model development.
+
+### 3.4 Data quality
+
+The full audit is in `reports/data_quality_report.md`. Summary:
+
+| Check | Result |
+|---|---|
+| Missing cells after cleaning | 1 |
+| Exact duplicate records | 0 |
+| Duplicate predictor patterns | 0 |
+| Near-constant features (modal >= 90%) | 2 |
+| Bin-definition anomalies | 1 |
+| Clinical inconsistencies flagged | 2 |
+| Variables with uncertain interpretation | 10 |
+
+- **`ba`** is near-constant: 94.5% of patients share the value `0`.
+- **`pot`** is near-constant: 98.5% of patients share the value `< 7.31`.
+- **`su`** has internally inconsistent published bin edges (overlaps: []; tied representatives: [['4 - 4', '>= 4']]), so its ordinal encoding contains ties. Reported, not silently repaired.
+- **`pot`** contains 1 value(s) in band `7.31 - 11.72`: Serum potassium far outside any survivable range (normal 3.5-5.1 mEq/L); almost certainly a recording or unit error.
+- **`pot`** contains 1 value(s) in band `38.18 - 42.59`: Serum potassium far outside any survivable range (normal 3.5-5.1 mEq/L); almost certainly a recording or unit error.
+- **`pot`** contains 1 value(s) in band `>= 42.59`: Serum potassium far outside any survivable range (normal 3.5-5.1 mEq/L); almost certainly a recording or unit error.
+
+- **Patients labelled 'notckd' but assigned an advanced CKD stage (s3-s5)** - 4 patients (CSV lines [12, 18, 52, 123]). Either the outcome label or the stage assignment is wrong for these records. Reported, not corrected: we have no external source of truth to arbitrate.
+- **Patients labelled 'notckd' whose eGFR band is below 60 mL/min/1.73m2** - 4 patients (CSV lines [12, 18, 52, 123]). An eGFR below 60 sustained over three months is itself a CKD-defining criterion, so these labels are internally inconsistent with the eGFR column. Chronicity cannot be verified from a single cross-sectional record, which is one possible benign explanation.
+
+#### The `" p "` value in `grf`
+
+Exactly 1 cell in the eGFR column contains the token `" p "` (the letter p with surrounding whitespace), which is not an interval label.
+- CSV line **183**, column `grf`, raw value `' p '`
+- The affected patient is labelled `ckd` and staged `s5`; every other patient at that stage falls in the eGFR band(s) `['< 26.6175']`.
+
+The most parsimonious reading is a data-entry error. Because the true value cannot be recovered, the cell is treated as **missing** and imputed using the median of the relevant training fold only. The raw file is preserved unmodified at `data/raw/`. Note that `grf` is excluded from every clinically valid configuration, so this defect can affect only the deliberately invalid leaky model.
+
+### 3.5 Leakage structure
+
+- **`affected` is an exact one-to-one copy of the outcome** (verified across all 200 rows; Cramer's V = 1.0). It is the target, renamed.
+- **`stage`** is a post-diagnosis staging label. Cramer's V with the outcome = 0.7548. Proportion CKD by stage:
+
+  | stage | n | proportion CKD |
+  |---|---:|---:|
+  | s1 | 54 | 0.167 |
+  | s2 | 35 | 0.343 |
+  | s3 | 31 | 1.000 |
+  | s4 | 45 | 0.911 |
+  | s5 | 35 | 1.000 |
+
+- **`grf`** is eGFR, the quantity from which `stage` is banded and by which CKD is defined (Cramer's V with `stage` = 0.7351). Using it to predict CKD approaches using the diagnostic criterion as a predictor.
+
+Stages s3 and s5 are 100% CKD. Any model given these columns is performing a lookup, not a prediction.
+
+### 3.6 Variables whose meaning could not be established
+
+The released dataset ships **no data dictionary** [4]. Rather than inventing clinical interpretations, variables whose meaning or provenance cannot be settled from the file are flagged explicitly:
+
+- **`bp (Diastolic)`** (exam) - The column is named for diastolic pressure but ships as a binary 0/1 flag, so the underlying mmHg value and the threshold that produced the flag are both unrecoverable. The direction of the coding (1 = elevated) is inferred from its association with 'bp limit' and 'htn', not from documentation.
+- **`bp limit`** (exam) - Undocumented. Empirically it refines 'bp (Diastolic)': every patient with bp (Diastolic)=0 has bp limit=0, while bp (Diastolic)=1 splits across all three levels. It is therefore most likely a graded severity band, but the mmHg cut-points are unknown and are NOT reconstructed here.
+- **`dm`** (history) - A first-time diabetes diagnosis requires a glucose assay, so in a population with poor prior healthcare contact this variable would be less freely available than assumed here.
+- **`cad`** (history) - Establishing CAD de novo is expensive. Its value as a *screening* predictor depends on patients already knowing the diagnosis.
+- **`appet`** (history) - Polarity (whether 1 denotes poor or good appetite) is not documented in the released file.
+- **`ane`** (blood_lab) - IMPORTANT AND CONSEQUENTIAL. Anaemia can also be recorded clinically (conjunctival or palmar pallor) at no cost. We verified that 'ane' is NOT a deterministic function of the 'hemo' bins (for example 25 patients with hemo 10-11.3 are ane=0 while 3 are ane=1), so it is not a pure re-coding of haemoglobin. Because provenance cannot be established from the file, it is EXCLUDED from the low-cost configuration. This is the conservative choice: it can only understate low-cost performance, never inflate it.
+- **`su`** (urine_dip) - The published bin edges for this column are internally inconsistent and overlapping ('1 - 2' vs '2 - 2'; '3 - 4' vs '4 - 4' vs '>= 4'), so its ordinal encoding contains ties. Reported as a data-quality defect; not silently repaired.
+- **`rbc`** (urine_micro) - Could in principle refer to a blood-count red-cell abnormality rather than urinary red cells, but its position among the urinalysis columns and the presence of a separate 'rbcc' (red blood cell count) column make urinary microscopy the far more likely reading.
+- **`sc`** (blood_lab) - Serum creatinine is the input to the eGFR equation that defines 'grf' and 'stage'. It is retained in the valid laboratory configuration because it is a genuine, routinely measured screening analyte rather than a diagnostic label, but it is the variable most likely to behave as a near-proxy for the outcome, and results are interpreted with that in mind.
+- **`pot`** (blood_lab) - Near-constant: 197 of 200 patients fall in the single bin '< 7.31'. The upper bins ('38.18 - 42.59', '>= 42.59') lie far outside any survivable serum potassium range and are almost certainly recording errors. Flagged, retained as-is, and carries essentially no usable information.
+
+The most consequential of these is `ane`. Anaemia can be recorded clinically at no cost, or read from a full blood count. We verified that `ane` is **not** a deterministic function of the `hemo` bins, so it is not a pure recoding of haemoglobin - but its provenance remains unresolved. It is therefore **excluded from the low-cost configuration**, which is the conservative choice: it can only understate low-cost performance, never inflate it.
+
+## 4. Methods
+
+### 4.1 Feature configurations
+
+Cost tiering is an explicit, auditable judgement recorded in `src/ckd/features/configs.py` with a written rationale per variable, not a fact extracted from the file. Six configurations were compared:
+
+| Configuration | k | Valid? | Contents |
+|---|---:|---|---|
+| `leaky_model` | 28 | **NO** | `age`, `bp (Diastolic)`, `bp limit`, `htn`, `dm`, `cad`, `appet`, `pe`, `sg`, `al`, `su`, `rbc`, `pc`, `pcc`, `ba`, `ane`, `bgr`, `bu`, `sc`, `sod`, `pot`, `hemo`, `pcv`, `rbcc`, `wbcc`, `grf`, `stage`, `affected` |
+| `full_valid_model` | 25 | yes | `age`, `bp (Diastolic)`, `bp limit`, `htn`, `dm`, `cad`, `appet`, `pe`, `sg`, `al`, `su`, `rbc`, `pc`, `pcc`, `ba`, `ane`, `bgr`, `bu`, `sc`, `sod`, `pot`, `hemo`, `pcv`, `rbcc`, `wbcc` |
+| `low_cost_model` | 11 | yes | `age`, `bp (Diastolic)`, `bp limit`, `htn`, `dm`, `cad`, `appet`, `pe`, `sg`, `al`, `su` |
+| `laboratory_model` | 14 | yes | `rbc`, `pc`, `pcc`, `ba`, `ane`, `bgr`, `bu`, `sc`, `sod`, `pot`, `hemo`, `pcv`, `rbcc`, `wbcc` |
+| `clinical_only_model` | 8 | yes | `age`, `bp (Diastolic)`, `bp limit`, `htn`, `dm`, `cad`, `appet`, `pe` |
+| `low_cost_plus_urine_micro_model` | 15 | yes | `age`, `bp (Diastolic)`, `bp limit`, `htn`, `dm`, `cad`, `appet`, `pe`, `sg`, `al`, `su`, `rbc`, `pc`, `pcc`, `ba` |
+
+- `leaky_model` is **deliberately invalid**. It exists only to quantify leakage-driven inflation and its results must never be read as evidence of clinical usefulness.
+- `clinical_only_model` and `low_cost_plus_urine_micro_model` are **flagged sensitivity analyses**. They exist because the boundary of 'low cost' is a genuine judgement call - specifically, whether urine microscopy (non-invasive but requiring a microscope and a technician) belongs inside it. Rather than deciding that silently, both sides of the boundary are reported.
+
+### 4.2 Models
+
+| Model | Notes |
+|---|---|
+| Dummy (prevalence) | Baseline: always predicts the training-fold prevalence. |
+| Logistic regression (L2) | Regularised linear baseline. Because the predictors are ordinal bin representatives, this assumes an approximately linear effect of the bin scale on the log-odds. |
+| Random forest | 300 trees; 8 candidates, kept small because inner folds hold ~32 patients. |
+| Support vector machine (RBF) | Requires scaling; scaler is fitted inside training folds only. |
+| XGBoost | Shallow trees (depth 2-3) to limit variance at n=200. |
+| Explainable boosting machine (GAM) | Main effects only (interactions=0); shape functions are directly readable. |
+
+**Neural networks and deep learning were deliberately excluded.** With 72 minority-class events and at most 25 predictors, a deep model cannot be estimated reliably, and fitting one would invite exactly the over-fitting this study is designed to detect.
+
+XGBoost was used rather than CatBoost. Both were installed and benchmarked; XGBoost fitted roughly three times faster on this data, which made the full repeated nested design feasible. The choice is about compute, not expected accuracy. The explainable boosting machine was configured with `interactions=0` (a pure generalised additive model), `outer_bags=6` and `max_rounds=1500`: the library defaults cost ~8.7 s per fit here while adding capacity this sample cannot support. Both are stated as compute/regularisation trade-offs, not as neutral defaults.
+
+Search spaces were kept small (at most 8 candidates per model) because inner folds hold roughly 32 patients; a large grid searched on folds that size selects on noise.
+
+### 4.3 Validation design
+
+| Element | Value |
+|---|---|
+| Outer loop | 5-fold stratified CV |
+| Inner loop | 4-fold stratified CV |
+| Repeats | 5 |
+| Independent outer test sets | 25 |
+| Inner selection metric | roc_auc |
+| Master seed | 20240517 |
+| Grid size | 6 configurations x 6 models x 3 calibration methods |
+| Runtime | 71.89 min |
+
+5 repeats were chosen as a documented compromise: 25 outer test sets stabilise the mean of fold-level metrics while keeping the full grid runnable in about 72 minutes on 12 CPU cores. Increasing repeats reduces cross-validation partition noise but **cannot** reduce the dominant source of uncertainty here, which is the 200-patient sample itself; that is quantified separately by patient-level bootstrap.
+
+Within each outer fold, in order: hyper-parameters are selected by grid search over the inner folds of the outer training data; the selected pipeline is refitted on the outer training data; probability calibration is fitted on the outer training data via `CalibratedClassifierCV` with its own internal stratified splits; the screening threshold is chosen from a further cross-validated prediction on the outer training data. Only then is `predict_proba` called on the outer test fold. Nothing - imputation, scaling, tuning, calibration, threshold - is computed on the outer test fold or on the complete dataset [6].
+
+A single train/test split was not used as the principal evaluation. SMOTE was not used: the class ratio is roughly 1.8:1, which does not warrant synthetic oversampling, and introducing it would add a resampling artefact without a specific question to justify it.
+
+### 4.4 Leakage prevention, enforced programmatically
+
+Three independent layers, each covered by automated tests:
+
+1. **Declaration.** Prohibited columns (`class`, `affected`, `stage`, `grf`) and the contents of every configuration are declared in code.
+2. **Runtime guard.** Every pipeline begins with a `LeakageGuard` that raises `LeakageError` at *fit and at transform time* if a prohibited column is present. It raises rather than dropping the column, so a bug in calling code cannot be silently absorbed. The invalid configuration must opt in explicitly, and even then the raw outcome column can never pass.
+3. **Pre-flight assertion.** `assert_pipeline_is_clean` is run over all 36 pipelines before any fitting begins.
+
+The key adversarial test hands a valid pipeline the **entire** dataframe including `affected`, `stage` and `grf` and asserts that it **refuses**. A separate test confirms that scaler and imputer statistics differ between folds, i.e. that preprocessing was not fitted on complete data.
+
+### 4.5 Evaluation
+
+Reported: ROC-AUC, PR-AUC, sensitivity/recall for CKD, specificity, precision (PPV), negative predictive value, F1, balanced accuracy, Brier score, calibration slope and intercept, expected calibration error, and the confusion matrix at two operating points.
+
+- **Primary threshold: 0.5**, prespecified in `config/experiment.yaml` before any result was computed.
+- **Screening threshold**: the highest threshold still achieving 90% sensitivity on inner cross-validated predictions **of the outer training fold**, recomputed independently in every fold. It never sees outer-test outcomes.
+
+Calibration slope and intercept follow the standard logistic recalibration framework [7]: the slope is the coefficient of `logit(p)` in an unpenalised logistic refit, and the intercept is obtained with `logit(p)` as a fixed offset. Slope < 1 indicates predictions that are too extreme. Where the predictions separate the classes completely the maximum-likelihood slope does not exist, and it is reported as undefined rather than as whatever value an optimiser happened to reach.
+
+**Caution stated in advance about isotonic calibration.** Isotonic regression fits a free-form monotone step function and is therefore far more flexible than Platt scaling. With roughly 160 patients available inside each training fold, it has enough freedom to follow noise, and the usual expectation at this sample size is that it will overfit and perform worse than the parametric alternative. It is included precisely so that this expectation is tested rather than assumed, and the result is reported in section 5.6 whichever way it falls.
+
+Uncertainty is reported two ways, deliberately kept separate: the spread across the 25 outer folds and across the 5 repeats (cross-validation partition variability), and a stratified patient-level bootstrap (2000 resamples, 95% percentile intervals). Conflating them would overstate precision.
+
+A decision-curve net-benefit analysis [8] is reported as an **exploratory** supplement.
+
+## 5. Results
+
+### 5.1 Baseline
+
+The dummy classifier, which always predicts the training-fold prevalence, achieved ROC-AUC 0.472 at best - chance, as required. Every result below should be read against that floor and against the 64.0% prevalence.
+
+### 5.2 Leakage audit (secondary question 1)
+
+Best model per configuration, uncalibrated, pooled out-of-fold predictions, with 95% bootstrap confidence intervals:
+
+| Configuration | k | Best model | ROC-AUC (95% CI) | PR-AUC | Sensitivity | Specificity | Brier |
+|---|---:|---|---|---|---|---|---|
+| Leaky (INVALID) | 28 | XGBoost | 1.000 (1.000-1.000) | 1.000 | 1.000 | 1.000 | 0.000 |
+| Full valid | 25 | SVM (RBF) | 1.000 (1.000-1.000) | 1.000 | 0.977 | 1.000 | 0.007 |
+| Laboratory | 14 | SVM (RBF) | 0.995 (0.988-0.999) | 0.997 | 0.969 | 0.972 | 0.028 |
+| Low-cost + urine microscopy | 15 | Random forest | 0.992 (0.980-0.999) | 0.996 | 0.961 | 1.000 | 0.033 |
+| Low-cost | 11 | Random forest | 0.992 (0.981-0.999) | 0.996 | 0.961 | 1.000 | 0.030 |
+| Clinical only | 8 | EBM (GAM) | 0.953 (0.919-0.979) | 0.979 | 0.914 | 0.986 | 0.058 |
+
+The invalid configuration reaches ROC-AUC 1.000 with sensitivity 1.000 and specificity 1.000. Measured against the best valid configuration the gain is only 0.000, but that is **not** evidence that leakage is unimportant here: the valid configuration is itself at 1.000, so there is essentially no headroom left for leakage to exploit. Section 5.5 explains why the valid model is already at the ceiling, and the table below re-measures the effect against baselines that are not saturated.
+
+**Why apparently perfect performance signals leakage rather than usefulness.** `affected` reproduces the outcome exactly, so any model given it needs only to copy one column; `stage` is assigned after diagnosis and is 100% CKD in stages s3 and s5; `grf` is the eGFR value from which staging is derived and by which CKD is defined. A model using them is not forecasting an unknown state from clinical signs - it is reading back a conclusion that was already recorded. Such a model would have nothing to contribute at the moment of screening, because at that moment none of these three quantities exists yet. The practical test is temporal: a predictor that could not have been measured *before* the diagnosis cannot support screening, however well it scores.
+
+This is directly relevant to the published record on this dataset, where accuracies at or near 100% are commonly reported.
+
+**An important caveat on how to read the inflation number.** The absolute ROC-AUC gain from leakage looks modest here, but that is a ceiling artefact, not evidence that leakage is harmless: the valid baseline is already close to 1.0, so there is almost no room left to gain. Measured against baselines that are not saturated:
+
+| Baseline configuration | Baseline ROC-AUC | Headroom to 1.0 | Absolute inflation | Share of headroom closed by leakage |
+|---|---:|---:|---:|---:|
+| Full valid | 1.000 | 0.000 | 0.000 | undefined (no headroom) |
+| Low-cost | 0.992 | 0.008 | 0.008 | 100.0% |
+| Clinical only | 0.953 | 0.047 | 0.047 | 100.0% |
+
+The honest summary is that leakage takes any configuration to the ceiling. Where a valid model already sits at the ceiling for other reasons - which, as section 5.5 shows, is the case here - the gain is arithmetically small while the epistemic problem is unchanged.
+
+### 5.3 Low-cost versus laboratory (primary question, secondary question 2)
+
+| Configuration | k | ROC-AUC (95% CI) | Sensitivity | Specificity | NPV | PPV | Brier |
+|---|---:|---|---|---|---|---|---|
+| Full valid | 25 | 1.000 (1.000-1.000) | 0.98 (0.95-1.00) | 1.00 (1.00-1.00) | 0.96 (0.91-1.00) | 1.00 (1.00-1.00) | 0.007 |
+| Laboratory | 14 | 0.995 (0.988-0.999) | 0.97 (0.94-0.99) | 0.97 (0.93-1.00) | 0.95 (0.89-0.99) | 0.98 (0.96-1.00) | 0.028 |
+| Low-cost + urine microscopy | 15 | 0.992 (0.980-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.033 |
+| Low-cost | 11 | 0.992 (0.981-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.030 |
+| Clinical only | 8 | 0.953 (0.919-0.979) | 0.91 (0.86-0.96) | 0.99 (0.96-1.00) | 0.87 (0.80-0.93) | 0.99 (0.97-1.00) | 0.058 |
+
+The low-cost set (11 variables, no venepuncture) reaches ROC-AUC 0.992 against 0.995 for the laboratory set (14 variables) - a gap of 0.003. The bootstrap confidence intervals overlap substantially, so this comparison is not statistically resolved at n=200; the study cannot distinguish the two configurations reliably.
+
+Dropping urine testing entirely (`clinical_only_model`, 8 variables) gives ROC-AUC 0.953, a loss of 0.039 relative to the low-cost set. Adding urine microscopy to the low-cost set gives 0.992, a change of -0.0002. The judgement call about where urine microscopy belongs therefore does not materially change the conclusions.
+
+### 5.4 Screening operating points
+
+Low-cost model (SVM (RBF), Isotonic), pooled out-of-fold predictions for all 200 patients:
+
+| Operating point | Threshold | TP | FP | TN | FN | Sensitivity | Specificity | PPV | NPV |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Prespecified (0.50) | 0.500 | 124 | 0 | 72 | 4 | 0.97 | 1.00 | 1.00 | 0.95 |
+| Screening (training-fold selected) | 0.967 | 118 | 0 | 72 | 10 | 0.92 | 1.00 | 1.00 | 0.88 |
+
+At the prespecified threshold the low-cost model misses **4 of 128 CKD patients** while referring **0 of 72 non-CKD patients** unnecessarily. Moving to the training-fold-selected screening threshold changes this to 10 missed and 0 unnecessary referrals.
+
+For a screening instrument the relevant question is not which threshold maximises accuracy but what exchange rate between missed cases and unnecessary referrals is acceptable in the intended setting - a judgement that depends on referral capacity and on the consequences of delayed diagnosis, neither of which this dataset contains. Figure R7 presents the full trade-off curve rather than a single recommended threshold.
+
+**Negative predictive value is prevalence-dependent.** The values above are computed at the 64.0% CKD prevalence of this hospital-based sample. In a community screening population, where CKD prevalence would be far lower, NPV would be substantially higher and PPV substantially lower for the same model. None of the predictive values reported here transfer to a different prevalence.
+
+### 5.5 Case mix: why the valid models are already near the ceiling (EXPLORATORY, post hoc)
+
+The valid configurations reach discrimination close to 1.0 without any prohibited column. That needs explaining before it is treated as good news, and the explanation is in the composition of the sample.
+
+**Finding 1: single predictors already separate the groups.** `hemo` alone achieves univariate ROC-AUC 0.968. Its value ranges are 6.10-14.55 in CKD patients and 11.95-16.50 in non-CKD patients; only 47% of patients fall in the range the two classes share. No multivariable learning is required to separate groups that are already this far apart.
+
+| Predictor | Univariate ROC-AUC | CKD range | Non-CKD range | Patients in shared range |
+|---|---:|---|---|---:|
+| `hemo` | 0.968 | 6.10-14.55 | 11.95-16.50 | 47% |
+| `pcv` | 0.949 | 17.90-47.15 | 39.35-49.10 | 51% |
+| `sg` | 0.888 | 1.01-1.02 | 1.02-1.02 | 58% |
+| `rbcc` | 0.876 | 2.69-7.41 | 4.17-6.53 | 84% |
+| `al` | 0.828 | 0.00-4.00 | 0.00-0.00 | 58% |
+| `htn` | 0.805 | 0.00-1.00 | 0.00-0.00 | 61% |
+| `sod` | 0.798 | 118.00-158.00 | 135.50-150.50 | 86% |
+| `bu` | 0.781 | 48.10-352.90 | 48.10-67.15 | 80% |
+
+**Finding 2: the cohort is dominated by advanced disease.** 107 of the 128 CKD patients (84%) are staged s3-s5. Only about 21 are early-stage. That is the profile of a case-control-like contrast between established, moderate-to-severe CKD and comparatively healthy controls - not of a consecutive screening series, in which most true cases would be early, asymptomatic and biochemically near-normal. Anaemia, low haematocrit and abnormal urine concentration are consequences of established kidney disease; they are exactly the features that are *absent* in the patients a screening programme most needs to identify.
+
+**Finding 3: performance degrades in the screening-relevant subgroup.** Re-evaluating the *same* out-of-fold predictions within stage-defined subgroups (`stage` is used only to partition patients for evaluation and never entered any model as a predictor):
+
+| Configuration | Subgroup | n CKD | ROC-AUC | Sensitivity @ 0.5 | NPV |
+|---|---|---:|---:|---:|---:|
+| Full valid | All patients (as sampled) | 128 | 1.000 | 0.98 | 0.96 |
+| Full valid | Advanced CKD (s4-s5) | 76 | 1.000 | 0.99 | 0.99 |
+| Full valid | Early CKD (s1-s2) | 21 | 1.000 | 0.90 | 0.97 |
+| Laboratory | All patients (as sampled) | 128 | 0.995 | 0.97 | 0.95 |
+| Laboratory | Advanced CKD (s4-s5) | 76 | 0.997 | 0.99 | 0.99 |
+| Laboratory | Early CKD (s1-s2) | 21 | 0.983 | 0.86 | 0.96 |
+| Low-cost | All patients (as sampled) | 128 | 0.993 | 0.97 | 0.95 |
+| Low-cost | Advanced CKD (s4-s5) | 76 | 0.993 | 0.97 | 0.97 |
+| Low-cost | Early CKD (s1-s2) | 21 | 0.983 | 0.90 | 0.97 |
+| Clinical only | All patients (as sampled) | 128 | 0.954 | 0.89 | 0.84 |
+| Clinical only | Advanced CKD (s4-s5) | 76 | 0.957 | 0.92 | 0.92 |
+| Clinical only | Early CKD (s1-s2) | 21 | 0.919 | 0.76 | 0.93 |
+
+Sensitivity is lower in the early-CKD subgroup for 4 of the 4 configurations examined. The largest decline is for Clinical only, from 0.891 across all patients to 0.762 among early-stage CKD - so roughly 24% of exactly the cases a screening programme exists to find are missed at the prespecified threshold, while its ROC-AUC in that subgroup is still 0.919. The dissociation matters: a near-ceiling AUC can coexist with materially worse case detection, and no aggregate metric reveals it.
+
+The full valid configuration is the exception: it separates the classes completely in **every** subgroup, including early CKD (ROC-AUC 1.000, sensitivity 0.905). That is not reassurance. With only 21 early-stage cases, and with a comparison group of 72 patients who were apparently healthy enough to be labelled non-CKD despite presenting at a tertiary hospital, perfect separation says more about how far apart the two groups are in this sample than about the difficulty of the screening task.
+
+These subgroup analyses are **exploratory and post hoc**, and the early CKD subgroup contains only 21 cases, so every estimate in it is imprecise and none of them would survive a demand for statistical significance. They are reported because the direction of the effect is consistent across the cheaper configurations, because the underlying case-mix imbalance is a hard fact about the sample rather than an inference, and because omitting the analysis would leave the headline numbers looking far more like screening performance than they are.
+
+### 5.6 Calibration (secondary question 3)
+
+Median across all valid configuration x model cells:
+
+| Calibration | Brier | Slope (ideal 1) | Intercept (ideal 0) | ECE |
+|---|---:|---:|---:|---:|
+| Uncalibrated | 0.037 | 1.83 | 0.27 | 0.046 |
+| Platt / sigmoid | 0.036 | 2.25 | 0.05 | 0.072 |
+| Isotonic | 0.029 | 1.71 | 0.11 | 0.028 |
+
+By median Brier score the best-performing calibration method across valid cells was **Isotonic**.
+
+Isotonic regression did not underperform Platt scaling here (median Brier 0.029 vs 0.036). This is somewhat contrary to the usual expectation at n=200 and should be treated with caution: with only 25 outer folds the comparison is itself noisy.
+
+**2 of 75 valid cells have an undefined calibration slope.** These are cells whose predictions separate the two classes completely, so the logistic recalibration model has no maximum-likelihood solution - the likelihood keeps increasing as the coefficient grows. An optimiser will still return a number (we observed values in the hundreds before adding the check), but it measures where the solver stopped, not calibration. Those cells are reported as undefined rather than given a spurious value.
+
+The model selected by the headline rule (Full valid, SVM (RBF), Isotonic) is one of those cases: it separates the classes completely, so its calibration slope is not identified. Its Brier score is 0.0036 and its calibration intercept 0.31. Perfect separation is precisely the situation in which the probability scale is least trustworthy: the model has no data telling it what a genuinely ambiguous patient looks like, so its intermediate probabilities are extrapolation. For a screening application this is a reason to prefer a model that does *not* separate perfectly.
+
+The low-cost model (SVM (RBF), Isotonic) does have an identified slope of 1.26 with intercept 0.06. A slope above 1 means its predictions are too conservative - it under-uses its own signal, which at this sample size is the safer direction of error.
+
+Across valid configurations every identified slope is above 1, i.e. the models are systematically **under**-confident rather than over-confident. That is the opposite of the usual small-sample pattern and follows from the same near-separability discussed in section 5.5: regularised models trained on 160 patients produce middling probabilities for patients the data actually separate cleanly.
+
+### 5.7 Feature importance and stability (secondary question 4)
+
+For the selected model (Full valid, SVM (RBF)), across 25 outer folds:
+
+- Kendall's W (concordance of the full ranking) = **0.471**
+- Mean pairwise Jaccard overlap of the top-5 sets = **0.341**
+
+| Feature | Tier | Mean permutation importance | SD | Mean rank | Top-5 frequency |
+|---|---|---:|---:|---:|---:|
+| `ba` | urine_micro | 0.0156 | 0.0171 | 6.5 | 0.60 |
+| `bgr` | blood_lab | 0.0136 | 0.0141 | 6.5 | 0.52 |
+| `sg` | urine_dip | 0.0134 | 0.0090 | 4.3 | 0.80 |
+| `hemo` | blood_lab | 0.0120 | 0.0079 | 4.8 | 0.68 |
+| `pcv` | blood_lab | 0.0096 | 0.0080 | 6.0 | 0.52 |
+| `bu` | blood_lab | 0.0095 | 0.0124 | 9.2 | 0.44 |
+| `sc` | blood_lab | 0.0093 | 0.0142 | 11.2 | 0.36 |
+| `su` | urine_dip | 0.0079 | 0.0155 | 9.3 | 0.20 |
+| `pot` | blood_lab | 0.0055 | 0.0071 | 14.1 | 0.32 |
+| `sod` | blood_lab | 0.0045 | 0.0042 | 10.2 | 0.20 |
+| `wbcc` | blood_lab | 0.0040 | 0.0062 | 13.6 | 0.16 |
+| `rbcc` | blood_lab | 0.0035 | 0.0034 | 10.9 | 0.04 |
+
+Features reaching the top 5 in at least 80% of folds: `sg`.
+
+Features that appear in the top 5 only intermittently (20-80% of folds) - i.e. features whose apparent importance is not reproducible: `ba`, `bgr`, `hemo`, `pcv`, `bu`, `sc`, `pot`.
+
+**The low-cost configuration is markedly more stable than the full one.** For Low-cost (SVM (RBF)), features reaching the top 5 in at least 80% of folds: `sg`, `al`, `dm`, `htn`.
+
+| Feature | Tier | Mean permutation importance | SD | Top-5 frequency |
+|---|---|---:|---:|---:|
+| `sg` | urine_dip | 0.1512 | 0.0374 | 1.00 |
+| `al` | urine_dip | 0.0814 | 0.0449 | 1.00 |
+| `dm` | history | 0.0494 | 0.0335 | 0.96 |
+| `htn` | history | 0.0405 | 0.0372 | 0.96 |
+| `appet` | history | 0.0152 | 0.0194 | 0.16 |
+| `su` | urine_dip | 0.0116 | 0.0148 | 0.20 |
+| `pe` | exam | 0.0098 | 0.0124 | 0.16 |
+| `cad` | history | 0.0096 | 0.0220 | 0.08 |
+
+This is the expected pattern and a reassuring one: with 25 highly correlated predictors the model can substitute one laboratory variable for another between folds, so no single one dominates reliably. With 11 largely non-redundant predictors the ranking settles down. It also means the low-cost model is the more *interpretable* of the two, independently of which discriminates better.
+
+**SHAP versus permutation importance.** The model selected by the headline rule (SVM (RBF)) admits no exact SHAP explainer, so SHAP was additionally computed for the best SHAP-capable valid model (Full valid, Logistic regression). The two measures agree closely (Spearman rho = 0.905 across features), which is evidence that the ranking reflects the model rather than the quirks of one attribution method. Where a technique did not apply it was recorded as such rather than silently omitted; see `reports/tables/table_20_importance_notes.txt`.
+
+**Interpretation limits.** These quantities describe how a fitted model uses a column given the other columns present. They are not effect sizes, and they are **not causal**. A variable can rank highly because it proxies something else in the dataset, and a genuinely important variable can rank low if a correlated variable absorbs its signal. Permutation importance was computed on outer test folds; because it is used only for reporting, and never to select features, models or thresholds, it does not contaminate the validation.
+
+### 5.8 Uncertainty (secondary question 5)
+
+| Configuration | ROC-AUC | 95% bootstrap CI | CI width | SD across repeats |
+|---|---:|---|---:|---:|
+| Full valid | 1.000 | (1.000-1.000) | 0.000 | 0.0000 |
+| Laboratory | 0.995 | (0.988-0.999) | 0.011 | 0.0013 |
+| Low-cost + urine microscopy | 0.992 | (0.980-0.999) | 0.020 | 0.0034 |
+| Low-cost | 0.992 | (0.981-0.999) | 0.019 | 0.0029 |
+| Clinical only | 0.953 | (0.919-0.979) | 0.061 | 0.0045 |
+
+Bootstrap intervals for ROC-AUC span roughly **0.02** on average. Differences between valid configurations smaller than that are not resolvable with 200 patients. The spread across repeats is much smaller than the bootstrap interval, which is the expected pattern and an important one: it shows that the uncertainty here is driven by the **sample**, not by the cross-validation partitioning. Running more repeats would tighten the former and do nothing about the latter.
+
+The bootstrap intervals themselves are **optimistically narrow**. They resample the same 200 patients that were used to fit the models whose predictions are being resampled, so they capture estimation noise but not the variation that would arise in a genuinely new population.
+
+### 5.9 Model selection
+
+Selection rule, fixed in advance: among cells with a valid feature configuration and a non-dummy model, take the highest mean ROC-AUC, breaking ties on the lower Brier score. Applied mechanically, this selects:
+
+- **Overall best valid model:** Full valid / SVM (RBF) / Isotonic - ROC-AUC 1.000, sensitivity 1.00, NPV 1.00, Brier 0.004
+- **Best low-cost model:** SVM (RBF) / Isotonic - ROC-AUC 0.993, sensitivity 0.97, NPV 0.95, Brier 0.019
+
+Selection was **not** made on accuracy. Because the intended use is screening, sensitivity, negative predictive value and calibration were the quantities examined, with discrimination used only as the ranking criterion and calibration as the tie-break.
+
+Hyper-parameter selection was itself unstable across folds, which is worth recording:
+
+| Model | Hyper-parameter | Modal value | Selection frequency | Distinct values chosen |
+|---|---|---|---:|---:|
+| EBM (GAM) | `learning_rate` | `0.01` | 0.52 | 2 |
+| Logistic regression | `C` | `0.01` | 0.96 | 2 |
+| Logistic regression | `class_weight` | `None` | 1.00 | 1 |
+| Random forest | `class_weight` | `None` | 0.64 | 2 |
+| Random forest | `max_depth` | `3` | 0.80 | 2 |
+| Random forest | `max_features` | `sqrt` | 1.00 | 1 |
+| Random forest | `min_samples_leaf` | `1` | 1.00 | 1 |
+| SVM (RBF) | `C` | `0.1` | 1.00 | 1 |
+| SVM (RBF) | `class_weight` | `None` | 0.92 | 2 |
+| SVM (RBF) | `gamma` | `scale` | 1.00 | 1 |
+| XGBoost | `max_depth` | `2` | 0.76 | 2 |
+| XGBoost | `colsample_bytree` | `0.8` | 1.00 | 1 |
+| XGBoost | `learning_rate` | `0.05` | 0.88 | 2 |
+| XGBoost | `reg_lambda` | `5.0` | 0.92 | 2 |
+| XGBoost | `subsample` | `0.8` | 1.00 | 1 |
+
+### 5.10 Which model is best supported, and for what
+
+The mechanical rule selects Full valid / SVM (RBF) / Isotonic because it has the highest discrimination. Taken on its own that is a misleading recommendation, and the analyses above say why:
+
+- It separates the classes **completely**, so its calibration slope is not identified at all. A screening tool is used by acting on a probability, and this model's probability scale cannot be checked.
+- Its feature importances are unstable (Kendall's W = 0.471; only 1 feature reaches the top 5 in 80% of folds), because 25 correlated laboratory variables can substitute for one another between folds.
+- It requires venepuncture and a full laboratory panel, which is exactly the constraint the study set out to relax.
+
+**Judged against the question this study actually asks, the better-supported configuration is the low-cost one** (SVM (RBF), Isotonic): ROC-AUC 0.993 against 1.000, a difference far inside the confidence intervals of either; an identified calibration slope of 1.26; markedly more stable importances (Kendall's W = 0.694, with `sg`, `al`, `dm`, `htn` in the top 5 of at least 80% of folds); and 11 variables obtainable from history, examination and a urine reagent strip.
+
+This preference is a statement about which result is better *evidenced*, not a recommendation to use anything. Neither model is validated for any clinical purpose, and section 5.5 shows that both are evaluated on a sample whose case mix flatters them.
+
+## 6. Discussion
+
+This study set out to measure one failure mode and found two. Both push measured performance towards 1.0, and neither is clinical usefulness.
+
+The first is **target leakage**. Including an exact copy of the outcome, a post-diagnosis stage label and the diagnostic eGFR value takes every configuration to ROC-AUC 1.000 - closing 100% of the headroom regardless of how good the honest baseline was. These columns sit in the released file with no marking to indicate that they are post-diagnosis, and any pipeline that selects features by association with the outcome will pick them up. The lesson is not that previous analyses were careless in some unusual way; it is that the trap is built into the dataset.
+
+The second is **case mix**, and on this dataset it turns out to matter more. Even with every prohibited column removed, the full valid configuration reaches ROC-AUC 1.000 - it separates all 200 patients out of fold. We verified this is not a residual leak: the pipelines are guarded, the runner restricts columns to those each configuration declares, and an automated test re-checks the perfect cells against the prohibited list. It is instead a genuine property of the sample, and section 5.5 shows what produces it.
+
+On the primary question, the low-cost variable set - history, examination and a urine reagent strip - achieves ROC-AUC 0.992 under leakage-controlled nested validation. That is well above chance and within the confidence interval of the laboratory-based configuration. Given that the low-cost set requires no venepuncture, no analyser and no microscope, the finding is **encouraging as a feasibility signal**. It is not evidence that such a model would work as a screening instrument.
+
+The case-mix analysis is what forces that distinction, and it turned out to matter more than the leakage audit. Leakage is the failure mode this study set out to measure; case mix is the failure mode the data revealed. Because 84% of the CKD patients here have moderate-to-severe disease, the models are largely being asked to distinguish established kidney failure from health - a task on which haemoglobin alone scores 0.968. A screening instrument faces a different and much harder problem, and the early-stage subgroup shows the models performing materially worse on it. An aggregate ROC-AUC near 1.0 on this sample should therefore be read as a statement about the sample, not about the method.
+
+This also reframes what a 'high-performing' published result on this dataset means. Two distinct mechanisms - target leakage and case-mix spectrum - both push measured performance towards the ceiling, and neither has anything to do with clinical usefulness. A study reporting 99% accuracy on this data has probably encountered one or both, and cannot distinguish them without exactly the kind of subgroup and leakage analysis reported here.
+
+Note that the best valid model overall used the Full valid configuration rather than the low-cost one. The low-cost result should therefore be read as 'a substantial fraction of the achievable signal at a fraction of the cost', not as 'no loss from dropping laboratory tests'.
+
+Calibration deserves particular emphasis because it is what makes a predicted probability usable for a referral decision. A model with good discrimination but a calibration slope well below 1 will systematically overstate risk in the patients it is most confident about - exactly the patients whose management would change. The comparison here also illustrates a general point about small samples: the more flexible calibration method is not the better one when there are only a few hundred observations to fit it with.
+
+The stability analysis is, in a sense, the most honest part of the study. With Kendall's W of 0.471 across 25 outer folds, the feature ranking is only moderately reproducible. Any narrative that named the 'top predictors of CKD' from a single fit of this dataset would be reporting an artefact of one partition.
+
+## 7. Limitations
+
+These are not boilerplate. Each one materially constrains what the results above can support.
+
+1. **Sample size.** 200 patients, 72 in the minority class. Bootstrap intervals for ROC-AUC span roughly 0.02, so differences between configurations smaller than that are not resolvable. Events per candidate predictor (2.88) is far below accepted minimums for prediction-model development [5].
+2. **No external validation.** Every estimate is internal to these 200 patients. Internal cross-validation systematically overstates the performance a model would show in a new population, and no correction applied here changes that.
+3. **Hospital-based, single-centre sampling.** Patients presenting at one medical college in Savar are not a random sample of any population. The 64.0% CKD prevalence is a property of who was recruited, not of any community. Selection bias is likely and its direction is unknown.
+4. **Case-mix (spectrum) bias - the most consequential limitation.** 107 of 128 CKD patients (84%) have stage s3-s5 disease, so the dataset largely contrasts established kidney failure with comparatively healthy controls. Discrimination measured on such a sample is systematically optimistic for screening use. Section 5.5 shows sensitivity for the low-cost model falling from 0.969 overall to 0.905 among early-stage CKD patients, and the clinical-only model from 0.891 to 0.762. **No headline figure in this report should be read as an estimate of screening performance.**
+5. **Pre-discretised predictors.** The published file contains only binned intervals. Real continuous values are unrecoverable, open-ended tail bins are compressed to their finite edge, and the effective measurement precision of every variable is unknown. A model built on continuous measurements might perform differently in either direction.
+6. **No data dictionary.** The dataset ships without variable definitions [4]. 10 variables have interpretations that could not be settled from the file and are flagged as uncertain rather than resolved by assumption. The tiering of `ane` in particular changes what 'low cost' means, and was decided conservatively.
+7. **Minimal demographic information.** Age is present, in bands. There is no sex, no ethnicity, no socioeconomic indicator, no comorbidity detail beyond three binary flags. Subgroup performance therefore cannot be assessed at all, and undetected differential performance across groups is entirely possible.
+8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Outcome-label noise attenuates every performance estimate here.
+9. **Cross-sectional data, no chronicity.** CKD is defined by abnormalities persisting beyond three months [2]. A single record cannot establish chronicity, so the outcome label itself rests on information not present in the file.
+10. **Prevalence-dependent metrics.** PPV and NPV reported here hold only at this sample's 64.0% prevalence and do not transfer to a community screening setting.
+11. **Linearity assumption for the linear models.** Ordinal bin representatives are entered on their original scale, so logistic regression and the SVM assume an approximately monotone, roughly linear relationship with the log-odds across bins. The tree ensembles and the EBM do not make this assumption.
+12. **Compute-driven modelling choices.** Search spaces, forest size and EBM capacity were constrained to keep the repeated nested design feasible. These are documented trade-offs; a larger search might find better configurations, though at this sample size it would also select on noise more aggressively.
+13. **Exploratory analyses.** The decision-curve net benefit, the univariate association screen and the correlation structure are labelled exploratory and were not used for any modelling decision. They should not be read as confirmatory findings.
+
+## 8. Ethical considerations
+
+**This is not a diagnostic tool and must not be used as one.** No model in this repository is validated for any clinical purpose. Presenting it to a patient or clinician as a screening instrument would be unsafe.
+
+**Consequences of error are asymmetric and are borne by patients.** A false negative in CKD screening means a patient with progressive kidney disease is reassured and not followed up; at the prespecified threshold the low-cost model produced 4 such errors among 128 CKD patients in cross-validation. A false positive means an unnecessary referral, which in a resource-constrained setting consumes capacity that another patient needed. Neither error is neutral, and the balance between them is a clinical and policy decision, not a modelling one.
+
+**Data governance.** The analysis uses de-identified records already released for research under CC BY 4.0 [4]. No attempt is made to re-identify any individual. The raw file is preserved unmodified and all derived artefacts are written separately. Findings about individual records (for instance the four internally inconsistent labels) are reported by CSV line number, which refers to a position in a public de-identified file and not to any identifiable person.
+
+**Equity.** A low-cost screening model is attractive precisely because it could extend detection to populations without laboratory access. That same argument makes undetected differential performance especially harmful: a model that works less well for a subgroup would concentrate its errors on the people the approach is meant to help. This dataset contains too little demographic information to check for that, which is a reason for caution rather than an excuse for silence.
+
+**Transparency about the leaky model.** A deliberately invalid configuration is included and reports near-ceiling performance. It is labelled INVALID in every table and figure that shows it. It exists to demonstrate a hazard, and quoting its numbers outside that context would be a misrepresentation.
+
+## 9. Reproducibility statement
+
+- **Seed.** A single master seed (`20240517`) deterministically derives every fold seed and model seed. `tests/test_reproducibility.py` asserts that identical seeds produce identical predictions and that different seeds produce different partitions.
+- **Input integrity.** The raw file is checksummed on every load (SHA-256 `f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a`) and is never written to.
+- **Single source of results.** All 108,000 out-of-fold predictions are written to `data/processed/cv_predictions.csv.gz`. Every table, figure and number in this report is derived from that one file, so results cannot drift apart from the cross-validation that produced them.
+- **Run manifest.** `data/processed/cv_predictions_manifest.json` records the design, the seed, the models actually run, the models unavailable in this environment, and the runtime (71.89 min).
+- **This document is generated.** Every quantity above is injected from `reports/tables/` by `scripts/06_write_report.py`; nothing is transcribed by hand.
+- **Environment.** Dependencies are pinned in `requirements.txt`.
+
+Exact commands:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pytest tests/ -q
+python scripts/run_all.py
+```
+
+## 10. Conclusion
+
+Under repeated nested cross-validation with programmatically enforced leakage control, a small model built only from history, physical examination and a urine reagent strip achieved ROC-AUC 0.992 (95% CI 0.981-0.999) for CKD status in this 200-patient single-centre sample, against 0.995 for a laboratory-based configuration. Including the dataset's three prohibited columns raised ROC-AUC to 1.000, quantifying the inflation that leakage produces and offering a concrete explanation for the near-perfect results frequently reported on this data.
+
+The prespecified selection rule, which ranks on discrimination alone, picks **SVM (RBF) on the Full valid configuration with Isotonic probabilities** (ROC-AUC 1.000, sensitivity 1.00, NPV 1.00, Brier 0.0036). We report that pick because the rule was fixed in advance, but we do not endorse it: as section 5.10 sets out, that model separates the classes completely, so its calibration slope is not identified, its feature importances are unstable (Kendall's W = 0.471), and it needs a full laboratory panel.
+
+**The best-supported model for the question this study asks is the low-cost one: SVM (RBF) with Isotonic probabilities on 11 history, examination and urine-dipstick variables** - ROC-AUC 0.993 against 1.000 for the full laboratory panel, a difference well inside either confidence interval; sensitivity 0.97, NPV 0.95, Brier 0.0192, and an identified calibration slope of 1.26. It is the only candidate whose probability scale can be checked and whose important variables are reproducible across folds.
+
+A post hoc case-mix analysis then showed that even the leakage-controlled figures overstate screening ability: 84% of the CKD patients have stage s3-s5 disease, haemoglobin alone discriminates at ROC-AUC 0.968, and among early-stage CKD patients the low-cost model's sensitivity falls from 0.969 to 0.905 while its ROC-AUC stays above 0.98. Two independent mechanisms - target leakage and case-mix spectrum - push measured performance towards the ceiling on this dataset, and neither reflects clinical usefulness.
+
+What this study supports is a methodological claim: leakage-controlled validation is achievable on this data, the low-cost variable set carries real signal, and the honest performance is meaningfully lower than the published record suggests - most of all for the early-stage patients a screening programme exists to find. What it does not support is any claim about clinical utility, causality, deployment readiness or generalisability. The estimates are internal to 200 patients from one hospital, with pre-discretised predictors, a case mix dominated by advanced disease, no demographic detail beyond age bands, and confidence intervals wide enough to encompass materially different conclusions. **External and prospective validation in a genuine screening population would be required** before any clinical interpretation is warranted.
+
+## References
+
+1. GBD Chronic Kidney Disease Collaboration. Global, regional, and national burden of chronic kidney disease, 1990-2017: a systematic analysis for the Global Burden of Disease Study 2017. *Lancet*. 2020;395(10225):709-733. doi:[10.1016/S0140-6736(20)30045-3](https://doi.org/10.1016/S0140-6736(20)30045-3)
+2. Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group. KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. *Kidney Int*. 2024;105(4S):S117-S314. doi:[10.1016/j.kint.2023.10.018](https://doi.org/10.1016/j.kint.2023.10.018)
+3. Collins GS, Moons KGM, Dhiman P, et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. *BMJ*. 2024;385:e078378. doi:[10.1136/bmj-2023-078378](https://doi.org/10.1136/bmj-2023-078378)
+4. Islam MA, Akter S. Risk Factor Prediction of Chronic Kidney Disease [dataset]. UCI Machine Learning Repository; 2020. Licensed CC BY 4.0. doi:[10.24432/C5WP64](https://doi.org/10.24432/C5WP64)
+5. Riley RD, Snell KIE, Ensor J, et al. Minimum sample size for developing a multivariable prediction model: PART II - binary and time-to-event outcomes. *Stat Med*. 2019;38(7):1276-1296. doi:[10.1002/sim.7992](https://doi.org/10.1002/sim.7992)
+6. Varma S, Simon R. Bias in error estimation when using cross-validation for model selection. *BMC Bioinformatics*. 2006;7:91. doi:[10.1186/1471-2105-7-91](https://doi.org/10.1186/1471-2105-7-91)
+7. Van Calster B, Nieboer D, Vergouwe Y, De Cock B, Pencina MJ, Steyerberg EW. A calibration hierarchy for risk models was defined: from utopia to empirical data. *J Clin Epidemiol*. 2016;74:167-176. doi:[10.1016/j.jclinepi.2015.12.005](https://doi.org/10.1016/j.jclinepi.2015.12.005)
+8. Vickers AJ, Elkin EB. Decision curve analysis: a novel method for evaluating prediction models. *Med Decis Making*. 2006;26(6):565-574. doi:[10.1177/0272989X06295361](https://doi.org/10.1177/0272989X06295361)
+9. Lundberg SM, Lee S-I. A unified approach to interpreting model predictions. In: *Advances in Neural Information Processing Systems 30 (NeurIPS 2017)*. 2017:4765-4774. arXiv:[1705.07874](https://arxiv.org/abs/1705.07874)
+10. Nori H, Jenkins S, Koch P, Caruana R. InterpretML: a unified framework for machine learning interpretability. 2019. arXiv:[1909.09223](https://arxiv.org/abs/1909.09223)
+
+*No reference above was generated without verification; each has a DOI or a stable arXiv identifier.*
+
+## Appendix A. Generated artefacts
+
+**Figures** (`reports/figures/`, 300 dpi PNG and PDF)
+
+- `fig_e1_cohort_composition.png`
+- `fig_e2_univariate_association.png`
+- `fig_e3_leakage_structure.png`
+- `fig_e4_predictor_correlation.png`
+- `fig_e5_configuration_composition.png`
+- `fig_r10_best_valid_importance_stability.png`
+- `fig_r10_low_cost_importance_stability.png`
+- `fig_r10_shap_capable_importance_stability.png`
+- `fig_r11_shap_capable_shap_vs_permutation.png`
+- `fig_r12_spectrum_effect.png`
+- `fig_r1_auc_heatmap.png`
+- `fig_r2_leakage_audit.png`
+- `fig_r3_screening_metrics.png`
+- `fig_r4_roc_pr_curves.png`
+- `fig_r5_calibration_curves.png`
+- `fig_r6_calibration_methods.png`
+- `fig_r7_threshold_tradeoff.png`
+- `fig_r8_confusion_matrices.png`
+- `fig_r9_uncertainty.png`
+
+**Tables** (`reports/tables/`)
+
+- `table_00_dataset_summary.csv`
+- `table_01_data_dictionary.csv`
+- `table_02_feature_configurations.csv`
+- `table_03_univariate_association.csv`
+- `table_04_collinear_pairs.csv`
+- `table_05_level_distribution_by_outcome.csv`
+- `table_06_variable_summary.csv`
+- `table_07_hyperparameter_selection.csv`
+- `table_08_metrics_per_repeat.csv`
+- `table_09_metrics_per_outer_fold.csv`
+- `table_10_metrics_summary_across_repeats.csv`
+- `table_11_bootstrap_confidence_intervals.csv`
+- `table_12_headline_results.csv`
+- `table_13_leakage_audit.csv`
+- `table_14_calibration_results.csv`
+- `table_15_calibration_curve_points.csv`
+- `table_16_selected_models.csv`
+- `table_17_threshold_tradeoff_low_cost.csv`
+- `table_18_confusion_matrices.csv`
+- `table_19_best_valid_importance_per_fold.csv`
+- `table_19_low_cost_importance_per_fold.csv`
+- `table_19_shap_capable_importance_per_fold.csv`
+- `table_20_importance_stability.csv`
+- `table_21_spectrum_analysis.csv`
+- `table_22_univariate_separability.csv`
+- `table_23_leakage_ceiling_analysis.csv`

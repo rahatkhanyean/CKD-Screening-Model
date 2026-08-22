@@ -1,0 +1,8 @@
+variable_1,variable_2,spearman_rho
+bp (Diastolic),bp limit,0.908
+hemo,pcv,0.861
+pcv,rbcc,0.697
+bu,sc,0.695
+hemo,rbcc,0.685
+al,pc,0.628
+htn,dm,0.617

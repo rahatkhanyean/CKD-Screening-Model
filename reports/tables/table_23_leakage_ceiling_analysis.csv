@@ -1,0 +1,4 @@
+baseline_config,baseline_roc_auc,leaky_roc_auc,absolute_inflation,headroom_below_ceiling,fraction_of_headroom_closed_by_leakage
+full_valid_model,1.0,1.0,0.0,0.0,
+low_cost_model,0.9920789930555556,1.0,0.00792100694444442,0.00792100694444442,1.0
+clinical_only_model,0.9525824652777778,1.0,0.04741753472222221,0.04741753472222221,1.0

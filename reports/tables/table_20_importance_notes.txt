@@ -1,0 +1,3 @@
+Notes recorded while computing importance
+==================================================
+- no exact SHAP explainer is applicable to svm

@@ -1,0 +1,23 @@
+# Pinned to the versions used for the reference run reported in
+# reports/research_report.md. Python 3.11 or newer is required
+# (the reference run used CPython 3.14.5 on Windows 11).
+
+numpy==2.5.2
+pandas==3.0.5
+scipy==1.18.0
+scikit-learn==1.9.0
+matplotlib==3.11.1
+PyYAML==6.0.3
+
+# Gradient boosting. XGBoost is the one actually used in the reported grid;
+# CatBoost is listed because it was benchmarked as the alternative and the
+# code path for either exists in src/ckd/models/zoo.py.
+xgboost==3.4.1
+catboost==1.2.10
+
+# Explainability
+shap==0.52.0
+interpret==0.7.8
+
+# Testing
+pytest==9.1.1

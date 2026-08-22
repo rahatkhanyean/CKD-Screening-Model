@@ -1,0 +1,276 @@
+target,fold_id,repeat,fold,method,feature,importance
+low_cost,0,0,0,permutation,age,0.0
+low_cost,0,0,0,permutation,bp (Diastolic),0.0
+low_cost,0,0,0,permutation,bp limit,0.006730769230769257
+low_cost,0,0,0,permutation,htn,0.02719780219780222
+low_cost,0,0,0,permutation,dm,0.03859890109890111
+low_cost,0,0,0,permutation,cad,0.0
+low_cost,0,0,0,permutation,appet,0.0017857142857143015
+low_cost,0,0,0,permutation,pe,0.00027472527472527375
+low_cost,0,0,0,permutation,sg,0.15570054945054945
+low_cost,0,0,0,permutation,al,0.05267857142857143
+low_cost,0,0,0,permutation,su,0.00027472527472527375
+low_cost,1,0,1,permutation,age,-0.0019230769230769219
+low_cost,1,0,1,permutation,bp (Diastolic),0.004464285714285676
+low_cost,1,0,1,permutation,bp limit,-0.0035714285714286086
+low_cost,1,0,1,permutation,htn,0.10398351648351642
+low_cost,1,0,1,permutation,dm,0.12870879120879117
+low_cost,1,0,1,permutation,cad,0.0035714285714285587
+low_cost,1,0,1,permutation,appet,0.06978021978021973
+low_cost,1,0,1,permutation,pe,0.0018543956043955978
+low_cost,1,0,1,permutation,sg,0.11291208791208784
+low_cost,1,0,1,permutation,al,0.05631868131868127
+low_cost,1,0,1,permutation,su,0.002953296703296693
+low_cost,2,0,2,permutation,age,0.005906593406593436
+low_cost,2,0,2,permutation,bp (Diastolic),0.018063186813186832
+low_cost,2,0,2,permutation,bp limit,0.022870879120879116
+low_cost,2,0,2,permutation,htn,0.01703296703296705
+low_cost,2,0,2,permutation,dm,0.031250000000000014
+low_cost,2,0,2,permutation,cad,0.002335164835164871
+low_cost,2,0,2,permutation,appet,0.01717032967032972
+low_cost,2,0,2,permutation,pe,0.016071428571428587
+low_cost,2,0,2,permutation,sg,0.1650412087912088
+low_cost,2,0,2,permutation,al,0.038461538461538436
+low_cost,2,0,2,permutation,su,0.006593406593406637
+low_cost,3,0,3,permutation,age,0.0
+low_cost,3,0,3,permutation,bp (Diastolic),0.0
+low_cost,3,0,3,permutation,bp limit,0.04333333333333332
+low_cost,3,0,3,permutation,htn,0.07759999999999999
+low_cost,3,0,3,permutation,dm,0.09140000000000001
+low_cost,3,0,3,permutation,cad,0.0
+low_cost,3,0,3,permutation,appet,0.04166666666666666
+low_cost,3,0,3,permutation,pe,0.0
+low_cost,3,0,3,permutation,sg,0.15873333333333334
+low_cost,3,0,3,permutation,al,0.10166666666666666
+low_cost,3,0,3,permutation,su,0.0
+low_cost,4,0,4,permutation,age,0.009133333333333337
+low_cost,4,0,4,permutation,bp (Diastolic),0.01940000000000004
+low_cost,4,0,4,permutation,bp limit,0.014666666666666706
+low_cost,4,0,4,permutation,htn,0.06500000000000003
+low_cost,4,0,4,permutation,dm,0.050933333333333386
+low_cost,4,0,4,permutation,cad,0.008800000000000035
+low_cost,4,0,4,permutation,appet,0.020133333333333385
+low_cost,4,0,4,permutation,pe,0.02233333333333338
+low_cost,4,0,4,permutation,sg,0.16686666666666677
+low_cost,4,0,4,permutation,al,0.14526666666666674
+low_cost,4,0,4,permutation,su,0.01093333333333336
+low_cost,5,1,0,permutation,age,0.003640109890109883
+low_cost,5,1,0,permutation,bp (Diastolic),0.021153846153846072
+low_cost,5,1,0,permutation,bp limit,0.0014423076923076373
+low_cost,5,1,0,permutation,htn,0.01442307692307685
+low_cost,5,1,0,permutation,dm,0.024656593406593354
+low_cost,5,1,0,permutation,cad,6.868131868131844e-05
+low_cost,5,1,0,permutation,appet,0.004739010989010956
+low_cost,5,1,0,permutation,pe,0.014010989010988911
+low_cost,5,1,0,permutation,sg,0.22733516483516475
+low_cost,5,1,0,permutation,al,0.05412087912087904
+low_cost,5,1,0,permutation,su,0.004807692307692252
+low_cost,6,1,1,permutation,age,-0.008653846153846257
+low_cost,6,1,1,permutation,bp (Diastolic),0.0008928571428570342
+low_cost,6,1,1,permutation,bp limit,-0.009271978021978128
+low_cost,6,1,1,permutation,htn,0.018063186813186687
+low_cost,6,1,1,permutation,dm,0.033241758241758096
+low_cost,6,1,1,permutation,cad,0.006043956043955928
+low_cost,6,1,1,permutation,appet,0.004876373626373509
+low_cost,6,1,1,permutation,pe,0.007623626373626247
+low_cost,6,1,1,permutation,sg,0.11614010989010974
+low_cost,6,1,1,permutation,al,0.04773351648351636
+low_cost,6,1,1,permutation,su,-0.004258241758241838
+low_cost,7,1,2,permutation,age,1.1102230246251566e-17
+low_cost,7,1,2,permutation,bp (Diastolic),0.0
+low_cost,7,1,2,permutation,bp limit,0.0035714285714285644
+low_cost,7,1,2,permutation,htn,0.061469780219780244
+low_cost,7,1,2,permutation,dm,0.058447802197802254
+low_cost,7,1,2,permutation,cad,0.04814560439560443
+low_cost,7,1,2,permutation,appet,0.026648351648351686
+low_cost,7,1,2,permutation,pe,0.0018543956043956089
+low_cost,7,1,2,permutation,sg,0.11380494505494507
+low_cost,7,1,2,permutation,al,0.09828296703296704
+low_cost,7,1,2,permutation,su,0.023969780219780266
+low_cost,8,1,3,permutation,age,0.019200000000000005
+low_cost,8,1,3,permutation,bp (Diastolic),0.00893333333333331
+low_cost,8,1,3,permutation,bp limit,0.019599999999999985
+low_cost,8,1,3,permutation,htn,0.05673333333333329
+low_cost,8,1,3,permutation,dm,0.0924
+low_cost,8,1,3,permutation,cad,0.004399999999999965
+low_cost,8,1,3,permutation,appet,0.008666666666666645
+low_cost,8,1,3,permutation,pe,0.004533333333333317
+low_cost,8,1,3,permutation,sg,0.17400000000000002
+low_cost,8,1,3,permutation,al,0.10706666666666668
+low_cost,8,1,3,permutation,su,0.025866666666666656
+low_cost,9,1,4,permutation,age,0.014999999999999975
+low_cost,9,1,4,permutation,bp (Diastolic),0.0015999999999999847
+low_cost,9,1,4,permutation,bp limit,0.014800000000000013
+low_cost,9,1,4,permutation,htn,0.06779999999999997
+low_cost,9,1,4,permutation,dm,0.03679999999999998
+low_cost,9,1,4,permutation,cad,0.004666666666666647
+low_cost,9,1,4,permutation,appet,0.005066666666666647
+low_cost,9,1,4,permutation,pe,0.00693333333333333
+low_cost,9,1,4,permutation,sg,0.13646666666666663
+low_cost,9,1,4,permutation,al,0.06393333333333333
+low_cost,9,1,4,permutation,su,0.005666666666666637
+low_cost,10,2,0,permutation,age,2.7755575615628914e-17
+low_cost,10,2,0,permutation,bp (Diastolic),0.0
+low_cost,10,2,0,permutation,bp limit,0.00013736263736264243
+low_cost,10,2,0,permutation,htn,0.0013736263736263744
+low_cost,10,2,0,permutation,dm,0.010851648351648351
+low_cost,10,2,0,permutation,cad,5.551115123125783e-18
+low_cost,10,2,0,permutation,appet,0.0024725274725274694
+low_cost,10,2,0,permutation,pe,1.6653345369377347e-17
+low_cost,10,2,0,permutation,sg,0.18791208791208794
+low_cost,10,2,0,permutation,al,0.004739010989011
+low_cost,10,2,0,permutation,su,1.1102230246251566e-17
+low_cost,11,2,1,permutation,age,0.0006868131868131844
+low_cost,11,2,1,permutation,bp (Diastolic),1.1102230246251566e-17
+low_cost,11,2,1,permutation,bp limit,0.0002747252747252904
+low_cost,11,2,1,permutation,htn,0.02706043956043957
+low_cost,11,2,1,permutation,dm,0.06449175824175826
+low_cost,11,2,1,permutation,cad,0.004670329670329687
+low_cost,11,2,1,permutation,appet,0.005631868131868162
+low_cost,11,2,1,permutation,pe,0.005631868131868167
+low_cost,11,2,1,permutation,sg,0.184271978021978
+low_cost,11,2,1,permutation,al,0.08688186813186816
+low_cost,11,2,1,permutation,su,0.040796703296703304
+low_cost,12,2,2,permutation,age,-0.0021978021978021622
+low_cost,12,2,2,permutation,bp (Diastolic),0.005219780219780307
+low_cost,12,2,2,permutation,bp limit,-0.008653846153846123
+low_cost,12,2,2,permutation,htn,0.03646978021978028
+low_cost,12,2,2,permutation,dm,0.1067307692307693
+low_cost,12,2,2,permutation,cad,0.0017170329670330275
+low_cost,12,2,2,permutation,appet,0.0006181318681319214
+low_cost,12,2,2,permutation,pe,5.551115123125783e-17
+low_cost,12,2,2,permutation,sg,0.16978021978021984
+low_cost,12,2,2,permutation,al,0.10370879120879124
+low_cost,12,2,2,permutation,su,0.001991758241758296
+low_cost,13,2,3,permutation,age,0.017199999999999983
+low_cost,13,2,3,permutation,bp (Diastolic),0.01333333333333329
+low_cost,13,2,3,permutation,bp limit,0.010999999999999982
+low_cost,13,2,3,permutation,htn,0.02413333333333333
+low_cost,13,2,3,permutation,dm,0.01806666666666664
+low_cost,13,2,3,permutation,cad,0.003133333333333305
+low_cost,13,2,3,permutation,appet,0.005399999999999938
+low_cost,13,2,3,permutation,pe,0.0068666666666666095
+low_cost,13,2,3,permutation,sg,0.0591333333333333
+low_cost,13,2,3,permutation,al,0.12579999999999997
+low_cost,13,2,3,permutation,su,0.0061333333333333075
+low_cost,14,2,4,permutation,age,0.0
+low_cost,14,2,4,permutation,bp (Diastolic),0.0
+low_cost,14,2,4,permutation,bp limit,0.006266666666666676
+low_cost,14,2,4,permutation,htn,0.03979999999999998
+low_cost,14,2,4,permutation,dm,0.021933333333333322
+low_cost,14,2,4,permutation,cad,0.1044
+low_cost,14,2,4,permutation,appet,0.013466666666666637
+low_cost,14,2,4,permutation,pe,0.035866666666666644
+low_cost,14,2,4,permutation,sg,0.10046666666666666
+low_cost,14,2,4,permutation,al,0.13639999999999997
+low_cost,14,2,4,permutation,su,0.04019999999999997
+low_cost,15,3,0,permutation,age,2.7755575615628914e-17
+low_cost,15,3,0,permutation,bp (Diastolic),0.009340659340659396
+low_cost,15,3,0,permutation,bp limit,0.01071428571428576
+low_cost,15,3,0,permutation,htn,0.020192307692307686
+low_cost,15,3,0,permutation,dm,0.10858516483516485
+low_cost,15,3,0,permutation,cad,0.011263736263736297
+low_cost,15,3,0,permutation,appet,0.017719780219780233
+low_cost,15,3,0,permutation,pe,0.0190934065934066
+low_cost,15,3,0,permutation,sg,0.16428571428571428
+low_cost,15,3,0,permutation,al,0.16380494505494508
+low_cost,15,3,0,permutation,su,0.014560439560439547
+low_cost,16,3,1,permutation,age,0.0027472527472528043
+low_cost,16,3,1,permutation,bp (Diastolic),0.010714285714285694
+low_cost,16,3,1,permutation,bp limit,0.0032967032967033127
+low_cost,16,3,1,permutation,htn,0.0528159340659341
+low_cost,16,3,1,permutation,dm,0.03997252747252749
+low_cost,16,3,1,permutation,cad,0.0007554945054945583
+low_cost,16,3,1,permutation,appet,0.0044642857142857375
+low_cost,16,3,1,permutation,pe,0.004189560439560452
+low_cost,16,3,1,permutation,sg,0.19292582417582418
+low_cost,16,3,1,permutation,al,0.04945054945054948
+low_cost,16,3,1,permutation,su,0.0010302197802198488
+low_cost,17,3,2,permutation,age,1.1102230246251566e-17
+low_cost,17,3,2,permutation,bp (Diastolic),0.0
+low_cost,17,3,2,permutation,bp limit,0.005769230769230788
+low_cost,17,3,2,permutation,htn,0.16950549450549451
+low_cost,17,3,2,permutation,dm,0.07458791208791211
+low_cost,17,3,2,permutation,cad,0.017788461538461548
+low_cost,17,3,2,permutation,appet,0.07335164835164835
+low_cost,17,3,2,permutation,pe,0.048076923076923114
+low_cost,17,3,2,permutation,sg,0.11524725274725274
+low_cost,17,3,2,permutation,al,0.08331043956043956
+low_cost,17,3,2,permutation,su,0.05137362637362638
+low_cost,18,3,3,permutation,age,0.006599999999999928
+low_cost,18,3,3,permutation,bp (Diastolic),0.0017333333333332478
+low_cost,18,3,3,permutation,bp limit,0.01739999999999995
+low_cost,18,3,3,permutation,htn,0.008866666666666589
+low_cost,18,3,3,permutation,dm,0.009866666666666597
+low_cost,18,3,3,permutation,cad,0.0030666666666665844
+low_cost,18,3,3,permutation,appet,0.005399999999999933
+low_cost,18,3,3,permutation,pe,0.0065333333333332634
+low_cost,18,3,3,permutation,sg,0.18713333333333323
+low_cost,18,3,3,permutation,al,0.012933333333333264
+low_cost,18,3,3,permutation,su,0.005533333333333268
+low_cost,19,3,4,permutation,age,0.0037999999999999423
+low_cost,19,3,4,permutation,bp (Diastolic),0.012933333333333269
+low_cost,19,3,4,permutation,bp limit,0.006799999999999945
+low_cost,19,3,4,permutation,htn,0.025199999999999924
+low_cost,19,3,4,permutation,dm,0.0582666666666666
+low_cost,19,3,4,permutation,cad,0.00039999999999994483
+low_cost,19,3,4,permutation,appet,0.007999999999999957
+low_cost,19,3,4,permutation,pe,0.005199999999999927
+low_cost,19,3,4,permutation,sg,0.10153333333333325
+low_cost,19,3,4,permutation,al,0.02979999999999992
+low_cost,19,3,4,permutation,su,0.0023333333333332928
+low_cost,20,4,0,permutation,age,0.011881868131868112
+low_cost,20,4,0,permutation,bp (Diastolic),0.0027472527472527375
+low_cost,20,4,0,permutation,bp limit,0.01332417582417587
+low_cost,20,4,0,permutation,htn,0.01332417582417586
+low_cost,20,4,0,permutation,dm,0.015384615384615396
+low_cost,20,4,0,permutation,cad,0.004258241758241754
+low_cost,20,4,0,permutation,appet,0.004807692307692313
+low_cost,20,4,0,permutation,pe,0.00563186813186814
+low_cost,20,4,0,permutation,sg,0.16119505494505493
+low_cost,20,4,0,permutation,al,0.12850274725274724
+low_cost,20,4,0,permutation,su,0.004395604395604408
+low_cost,21,4,1,permutation,age,1.1102230246251566e-17
+low_cost,21,4,1,permutation,bp (Diastolic),0.0
+low_cost,21,4,1,permutation,bp limit,0.0
+low_cost,21,4,1,permutation,htn,0.0023351648351648546
+low_cost,21,4,1,permutation,dm,0.02424450549450549
+low_cost,21,4,1,permutation,cad,0.0
+low_cost,21,4,1,permutation,appet,0.0
+low_cost,21,4,1,permutation,pe,0.0
+low_cost,21,4,1,permutation,sg,0.15329670329670328
+low_cost,21,4,1,permutation,al,0.10254120879120883
+low_cost,21,4,1,permutation,su,0.012912087912087932
+low_cost,22,4,2,permutation,age,0.0
+low_cost,22,4,2,permutation,bp (Diastolic),0.0
+low_cost,22,4,2,permutation,bp limit,0.0009615384615384581
+low_cost,22,4,2,permutation,htn,0.016895604395604447
+low_cost,22,4,2,permutation,dm,0.03997252747252748
+low_cost,22,4,2,permutation,cad,0.0
+low_cost,22,4,2,permutation,appet,0.007829670329670335
+low_cost,22,4,2,permutation,pe,0.0
+low_cost,22,4,2,permutation,sg,0.1393543956043956
+low_cost,22,4,2,permutation,al,0.015521978021978028
+low_cost,22,4,2,permutation,su,0.0
+low_cost,23,4,3,permutation,age,-0.006000000000000038
+low_cost,23,4,3,permutation,bp (Diastolic),0.00359999999999997
+low_cost,23,4,3,permutation,bp limit,0.009999999999999959
+low_cost,23,4,3,permutation,htn,0.01599999999999997
+low_cost,23,4,3,permutation,dm,0.02419999999999995
+low_cost,23,4,3,permutation,cad,0.004533333333333267
+low_cost,23,4,3,permutation,appet,0.014733333333333293
+low_cost,23,4,3,permutation,pe,0.002333333333333282
+low_cost,23,4,3,permutation,sg,0.14879999999999993
+low_cost,23,4,3,permutation,al,0.08279999999999998
+low_cost,23,4,3,permutation,su,0.026266666666666626
+low_cost,24,4,4,permutation,age,0.012199999999999944
+low_cost,24,4,4,permutation,bp (Diastolic),0.015333333333333305
+low_cost,24,4,4,permutation,bp limit,0.01333333333333327
+low_cost,24,4,4,permutation,htn,0.048066666666666584
+low_cost,24,4,4,permutation,dm,0.03166666666666661
+low_cost,24,4,4,permutation,cad,0.005933333333333279
+low_cost,24,4,4,permutation,appet,0.01453333333333326
+low_cost,24,4,4,permutation,pe,0.028933333333333262
+low_cost,24,4,4,permutation,sg,0.18773333333333328
+low_cost,24,4,4,permutation,al,0.14306666666666662
+low_cost,24,4,4,permutation,su,0.006666666666666587

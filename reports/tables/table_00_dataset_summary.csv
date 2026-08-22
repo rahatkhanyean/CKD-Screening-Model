@@ -1,0 +1,15 @@
+item,value
+Source SHA-256,f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a
+Rows as read (excluding header),202
+Metadata rows removed,2
+Patient records analysed,200
+Columns,29
+CKD (positive),128
+Non-CKD (negative),72
+Missing cells after cleaning,1
+Exact duplicate records,0
+Near-constant features (modal >= 90%),2
+Bin-definition anomalies,1
+Clinical inconsistencies flagged,2
+affected is an exact copy of class,True
+Variables with uncertain interpretation,10

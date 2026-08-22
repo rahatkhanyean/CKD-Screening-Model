@@ -1,0 +1,44 @@
+{
+  "seed": 20240517,
+  "outer_folds": 5,
+  "inner_folds": 4,
+  "repeats": 5,
+  "inner_scoring": "roc_auc",
+  "target_sensitivity": 0.9,
+  "primary_threshold": 0.5,
+  "models_run": [
+    "dummy",
+    "logreg",
+    "random_forest",
+    "svm",
+    "xgboost",
+    "ebm"
+  ],
+  "models_unavailable": {},
+  "configs_run": [
+    "leaky_model",
+    "full_valid_model",
+    "low_cost_model",
+    "laboratory_model",
+    "clinical_only_model",
+    "low_cost_plus_urine_micro_model"
+  ],
+  "calibrations_run": [
+    "none",
+    "sigmoid",
+    "isotonic"
+  ],
+  "n_patients": 200,
+  "n_positive": 128,
+  "runtime_minutes": 71.89,
+  "n_prediction_rows": 108000,
+  "n_outer_folds_total": 2700,
+  "config_feature_counts": {
+    "leaky_model": 28,
+    "full_valid_model": 25,
+    "low_cost_model": 11,
+    "laboratory_model": 14,
+    "clinical_only_model": 8,
+    "low_cost_plus_urine_micro_model": 15
+  }
+}

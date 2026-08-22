@@ -1,0 +1,923 @@
+{
+  "bp (Diastolic)": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "bp limit": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    },
+    {
+      "label": "2",
+      "lower": 2.0,
+      "upper": 2.0,
+      "representative": 2.0
+    }
+  ],
+  "sg": [
+    {
+      "label": "< 1.007",
+      "lower": -Infinity,
+      "upper": 1.007,
+      "representative": 1.007
+    },
+    {
+      "label": "1.009 - 1.011",
+      "lower": 1.009,
+      "upper": 1.011,
+      "representative": 1.0099999999999998
+    },
+    {
+      "label": "1.015 - 1.017",
+      "lower": 1.015,
+      "upper": 1.017,
+      "representative": 1.016
+    },
+    {
+      "label": "1.019 - 1.021",
+      "lower": 1.019,
+      "upper": 1.021,
+      "representative": 1.02
+    },
+    {
+      "label": ">= 1.023",
+      "lower": 1.023,
+      "upper": Infinity,
+      "representative": 1.023
+    }
+  ],
+  "al": [
+    {
+      "label": "< 0",
+      "lower": -Infinity,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1 - 1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    },
+    {
+      "label": "2 - 2",
+      "lower": 2.0,
+      "upper": 2.0,
+      "representative": 2.0
+    },
+    {
+      "label": "3 - 3",
+      "lower": 3.0,
+      "upper": 3.0,
+      "representative": 3.0
+    },
+    {
+      "label": ">= 4",
+      "lower": 4.0,
+      "upper": Infinity,
+      "representative": 4.0
+    }
+  ],
+  "class": [],
+  "rbc": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "su": [
+    {
+      "label": "< 0",
+      "lower": -Infinity,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1 - 2",
+      "lower": 1.0,
+      "upper": 2.0,
+      "representative": 1.5
+    },
+    {
+      "label": "2 - 2",
+      "lower": 2.0,
+      "upper": 2.0,
+      "representative": 2.0
+    },
+    {
+      "label": "3 - 4",
+      "lower": 3.0,
+      "upper": 4.0,
+      "representative": 3.5
+    },
+    {
+      "label": "4 - 4",
+      "lower": 4.0,
+      "upper": 4.0,
+      "representative": 4.0
+    },
+    {
+      "label": ">= 4",
+      "lower": 4.0,
+      "upper": Infinity,
+      "representative": 4.0
+    }
+  ],
+  "pc": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "pcc": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "ba": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "bgr": [
+    {
+      "label": "< 112",
+      "lower": -Infinity,
+      "upper": 112.0,
+      "representative": 112.0
+    },
+    {
+      "label": "112 - 154",
+      "lower": 112.0,
+      "upper": 154.0,
+      "representative": 133.0
+    },
+    {
+      "label": "154 - 196",
+      "lower": 154.0,
+      "upper": 196.0,
+      "representative": 175.0
+    },
+    {
+      "label": "196 - 238",
+      "lower": 196.0,
+      "upper": 238.0,
+      "representative": 217.0
+    },
+    {
+      "label": "238 - 280",
+      "lower": 238.0,
+      "upper": 280.0,
+      "representative": 259.0
+    },
+    {
+      "label": "280 - 322",
+      "lower": 280.0,
+      "upper": 322.0,
+      "representative": 301.0
+    },
+    {
+      "label": "322 - 364",
+      "lower": 322.0,
+      "upper": 364.0,
+      "representative": 343.0
+    },
+    {
+      "label": "364 - 406",
+      "lower": 364.0,
+      "upper": 406.0,
+      "representative": 385.0
+    },
+    {
+      "label": "406 - 448",
+      "lower": 406.0,
+      "upper": 448.0,
+      "representative": 427.0
+    },
+    {
+      "label": ">= 448",
+      "lower": 448.0,
+      "upper": Infinity,
+      "representative": 448.0
+    }
+  ],
+  "bu": [
+    {
+      "label": "< 48.1",
+      "lower": -Infinity,
+      "upper": 48.1,
+      "representative": 48.1
+    },
+    {
+      "label": "48.1 - 86.2",
+      "lower": 48.1,
+      "upper": 86.2,
+      "representative": 67.15
+    },
+    {
+      "label": "86.2 - 124.3",
+      "lower": 86.2,
+      "upper": 124.3,
+      "representative": 105.25
+    },
+    {
+      "label": "124.3 - 162.4",
+      "lower": 124.3,
+      "upper": 162.4,
+      "representative": 143.35
+    },
+    {
+      "label": "162.4 - 200.5",
+      "lower": 162.4,
+      "upper": 200.5,
+      "representative": 181.45
+    },
+    {
+      "label": "200.5 - 238.6",
+      "lower": 200.5,
+      "upper": 238.6,
+      "representative": 219.55
+    },
+    {
+      "label": "238.6 - 276.7",
+      "lower": 238.6,
+      "upper": 276.7,
+      "representative": 257.65
+    },
+    {
+      "label": ">= 352.9",
+      "lower": 352.9,
+      "upper": Infinity,
+      "representative": 352.9
+    }
+  ],
+  "sod": [
+    {
+      "label": "< 118",
+      "lower": -Infinity,
+      "upper": 118.0,
+      "representative": 118.0
+    },
+    {
+      "label": "118 - 123",
+      "lower": 118.0,
+      "upper": 123.0,
+      "representative": 120.5
+    },
+    {
+      "label": "123 - 128",
+      "lower": 123.0,
+      "upper": 128.0,
+      "representative": 125.5
+    },
+    {
+      "label": "128 - 133",
+      "lower": 128.0,
+      "upper": 133.0,
+      "representative": 130.5
+    },
+    {
+      "label": "133 - 138",
+      "lower": 133.0,
+      "upper": 138.0,
+      "representative": 135.5
+    },
+    {
+      "label": "138 - 143",
+      "lower": 138.0,
+      "upper": 143.0,
+      "representative": 140.5
+    },
+    {
+      "label": "143 - 148",
+      "lower": 143.0,
+      "upper": 148.0,
+      "representative": 145.5
+    },
+    {
+      "label": "148 - 153",
+      "lower": 148.0,
+      "upper": 153.0,
+      "representative": 150.5
+    },
+    {
+      "label": ">= 158",
+      "lower": 158.0,
+      "upper": Infinity,
+      "representative": 158.0
+    }
+  ],
+  "sc": [
+    {
+      "label": "< 3.65",
+      "lower": -Infinity,
+      "upper": 3.65,
+      "representative": 3.65
+    },
+    {
+      "label": "3.65 - 6.8",
+      "lower": 3.65,
+      "upper": 6.8,
+      "representative": 5.225
+    },
+    {
+      "label": "6.8 - 9.95",
+      "lower": 6.8,
+      "upper": 9.95,
+      "representative": 8.375
+    },
+    {
+      "label": "9.95 - 13.1",
+      "lower": 9.95,
+      "upper": 13.1,
+      "representative": 11.524999999999999
+    },
+    {
+      "label": "13.1 - 16.25",
+      "lower": 13.1,
+      "upper": 16.25,
+      "representative": 14.675
+    },
+    {
+      "label": "16.25 - 19.4",
+      "lower": 16.25,
+      "upper": 19.4,
+      "representative": 17.825
+    },
+    {
+      "label": ">= 28.85",
+      "lower": 28.85,
+      "upper": Infinity,
+      "representative": 28.85
+    }
+  ],
+  "pot": [
+    {
+      "label": "< 7.31",
+      "lower": -Infinity,
+      "upper": 7.31,
+      "representative": 7.31
+    },
+    {
+      "label": "7.31 - 11.72",
+      "lower": 7.31,
+      "upper": 11.72,
+      "representative": 9.515
+    },
+    {
+      "label": "38.18 - 42.59",
+      "lower": 38.18,
+      "upper": 42.59,
+      "representative": 40.385000000000005
+    },
+    {
+      "label": ">= 42.59",
+      "lower": 42.59,
+      "upper": Infinity,
+      "representative": 42.59
+    }
+  ],
+  "hemo": [
+    {
+      "label": "< 6.1",
+      "lower": -Infinity,
+      "upper": 6.1,
+      "representative": 6.1
+    },
+    {
+      "label": "6.1 - 7.4",
+      "lower": 6.1,
+      "upper": 7.4,
+      "representative": 6.75
+    },
+    {
+      "label": "7.4 - 8.7",
+      "lower": 7.4,
+      "upper": 8.7,
+      "representative": 8.05
+    },
+    {
+      "label": "8.7 - 10",
+      "lower": 8.7,
+      "upper": 10.0,
+      "representative": 9.35
+    },
+    {
+      "label": "10 - 11.3",
+      "lower": 10.0,
+      "upper": 11.3,
+      "representative": 10.65
+    },
+    {
+      "label": "11.3 - 12.6",
+      "lower": 11.3,
+      "upper": 12.6,
+      "representative": 11.95
+    },
+    {
+      "label": "12.6 - 13.9",
+      "lower": 12.6,
+      "upper": 13.9,
+      "representative": 13.25
+    },
+    {
+      "label": "13.9 - 15.2",
+      "lower": 13.9,
+      "upper": 15.2,
+      "representative": 14.55
+    },
+    {
+      "label": "15.2 - 16.5",
+      "lower": 15.2,
+      "upper": 16.5,
+      "representative": 15.85
+    },
+    {
+      "label": ">= 16.5",
+      "lower": 16.5,
+      "upper": Infinity,
+      "representative": 16.5
+    }
+  ],
+  "pcv": [
+    {
+      "label": "< 17.9",
+      "lower": -Infinity,
+      "upper": 17.9,
+      "representative": 17.9
+    },
+    {
+      "label": "17.9 - 21.8",
+      "lower": 17.9,
+      "upper": 21.8,
+      "representative": 19.85
+    },
+    {
+      "label": "21.8 - 25.7",
+      "lower": 21.8,
+      "upper": 25.7,
+      "representative": 23.75
+    },
+    {
+      "label": "25.7 - 29.6",
+      "lower": 25.7,
+      "upper": 29.6,
+      "representative": 27.65
+    },
+    {
+      "label": "29.6 - 33.5",
+      "lower": 29.6,
+      "upper": 33.5,
+      "representative": 31.55
+    },
+    {
+      "label": "33.5 - 37.4",
+      "lower": 33.5,
+      "upper": 37.4,
+      "representative": 35.45
+    },
+    {
+      "label": "37.4 - 41.3",
+      "lower": 37.4,
+      "upper": 41.3,
+      "representative": 39.349999999999994
+    },
+    {
+      "label": "41.3 - 45.2",
+      "lower": 41.3,
+      "upper": 45.2,
+      "representative": 43.25
+    },
+    {
+      "label": "45.2 - 49.1",
+      "lower": 45.2,
+      "upper": 49.1,
+      "representative": 47.150000000000006
+    },
+    {
+      "label": ">= 49.1",
+      "lower": 49.1,
+      "upper": Infinity,
+      "representative": 49.1
+    }
+  ],
+  "rbcc": [
+    {
+      "label": "< 2.69",
+      "lower": -Infinity,
+      "upper": 2.69,
+      "representative": 2.69
+    },
+    {
+      "label": "2.69 - 3.28",
+      "lower": 2.69,
+      "upper": 3.28,
+      "representative": 2.985
+    },
+    {
+      "label": "3.28 - 3.87",
+      "lower": 3.28,
+      "upper": 3.87,
+      "representative": 3.575
+    },
+    {
+      "label": "3.87 - 4.46",
+      "lower": 3.87,
+      "upper": 4.46,
+      "representative": 4.165
+    },
+    {
+      "label": "4.46 - 5.05",
+      "lower": 4.46,
+      "upper": 5.05,
+      "representative": 4.755
+    },
+    {
+      "label": "5.05 - 5.64",
+      "lower": 5.05,
+      "upper": 5.64,
+      "representative": 5.345
+    },
+    {
+      "label": "5.64 - 6.23",
+      "lower": 5.64,
+      "upper": 6.23,
+      "representative": 5.9350000000000005
+    },
+    {
+      "label": "6.23 - 6.82",
+      "lower": 6.23,
+      "upper": 6.82,
+      "representative": 6.525
+    },
+    {
+      "label": ">= 7.41",
+      "lower": 7.41,
+      "upper": Infinity,
+      "representative": 7.41
+    }
+  ],
+  "wbcc": [
+    {
+      "label": "< 4980",
+      "lower": -Infinity,
+      "upper": 4980.0,
+      "representative": 4980.0
+    },
+    {
+      "label": "4980 - 7360",
+      "lower": 4980.0,
+      "upper": 7360.0,
+      "representative": 6170.0
+    },
+    {
+      "label": "7360 - 9740",
+      "lower": 7360.0,
+      "upper": 9740.0,
+      "representative": 8550.0
+    },
+    {
+      "label": "9740 - 12120",
+      "lower": 9740.0,
+      "upper": 12120.0,
+      "representative": 10930.0
+    },
+    {
+      "label": "12120 - 14500",
+      "lower": 12120.0,
+      "upper": 14500.0,
+      "representative": 13310.0
+    },
+    {
+      "label": "14500 - 16880",
+      "lower": 14500.0,
+      "upper": 16880.0,
+      "representative": 15690.0
+    },
+    {
+      "label": "16880 - 19260",
+      "lower": 16880.0,
+      "upper": 19260.0,
+      "representative": 18070.0
+    },
+    {
+      "label": "19260 - 21640",
+      "lower": 19260.0,
+      "upper": 21640.0,
+      "representative": 20450.0
+    },
+    {
+      "label": ">= 24020",
+      "lower": 24020.0,
+      "upper": Infinity,
+      "representative": 24020.0
+    }
+  ],
+  "htn": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "dm": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "cad": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "appet": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "pe": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "ane": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "grf": [
+    {
+      "label": "< 26.6175",
+      "lower": -Infinity,
+      "upper": 26.6175,
+      "representative": 26.6175
+    },
+    {
+      "label": "26.6175 - 51.7832",
+      "lower": 26.6175,
+      "upper": 51.7832,
+      "representative": 39.20035
+    },
+    {
+      "label": "51.7832 - 76.949",
+      "lower": 51.7832,
+      "upper": 76.949,
+      "representative": 64.3661
+    },
+    {
+      "label": "76.949 - 102.115",
+      "lower": 76.949,
+      "upper": 102.115,
+      "representative": 89.532
+    },
+    {
+      "label": "102.115 - 127.281",
+      "lower": 102.115,
+      "upper": 127.281,
+      "representative": 114.69800000000001
+    },
+    {
+      "label": "127.281 - 152.446",
+      "lower": 127.281,
+      "upper": 152.446,
+      "representative": 139.8635
+    },
+    {
+      "label": "152.446 - 177.612",
+      "lower": 152.446,
+      "upper": 177.612,
+      "representative": 165.029
+    },
+    {
+      "label": "177.612 - 202.778",
+      "lower": 177.612,
+      "upper": 202.778,
+      "representative": 190.195
+    },
+    {
+      "label": "202.778 - 227.944",
+      "lower": 202.778,
+      "upper": 227.944,
+      "representative": 215.361
+    },
+    {
+      "label": ">= 227.944",
+      "lower": 227.944,
+      "upper": Infinity,
+      "representative": 227.944
+    }
+  ],
+  "stage": [
+    {
+      "label": "s1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    },
+    {
+      "label": "s2",
+      "lower": 2.0,
+      "upper": 2.0,
+      "representative": 2.0
+    },
+    {
+      "label": "s3",
+      "lower": 3.0,
+      "upper": 3.0,
+      "representative": 3.0
+    },
+    {
+      "label": "s4",
+      "lower": 4.0,
+      "upper": 4.0,
+      "representative": 4.0
+    },
+    {
+      "label": "s5",
+      "lower": 5.0,
+      "upper": 5.0,
+      "representative": 5.0
+    }
+  ],
+  "affected": [
+    {
+      "label": "0",
+      "lower": 0.0,
+      "upper": 0.0,
+      "representative": 0.0
+    },
+    {
+      "label": "1",
+      "lower": 1.0,
+      "upper": 1.0,
+      "representative": 1.0
+    }
+  ],
+  "age": [
+    {
+      "label": "< 12",
+      "lower": -Infinity,
+      "upper": 12.0,
+      "representative": 12.0
+    },
+    {
+      "label": "12 - 20",
+      "lower": 12.0,
+      "upper": 20.0,
+      "representative": 16.0
+    },
+    {
+      "label": "20 - 27",
+      "lower": 20.0,
+      "upper": 27.0,
+      "representative": 23.5
+    },
+    {
+      "label": "27 - 35",
+      "lower": 27.0,
+      "upper": 35.0,
+      "representative": 31.0
+    },
+    {
+      "label": "35 - 43",
+      "lower": 35.0,
+      "upper": 43.0,
+      "representative": 39.0
+    },
+    {
+      "label": "43 - 51",
+      "lower": 43.0,
+      "upper": 51.0,
+      "representative": 47.0
+    },
+    {
+      "label": "51 - 59",
+      "lower": 51.0,
+      "upper": 59.0,
+      "representative": 55.0
+    },
+    {
+      "label": "59 - 66",
+      "lower": 59.0,
+      "upper": 66.0,
+      "representative": 62.5
+    },
+    {
+      "label": "66 - 74",
+      "lower": 66.0,
+      "upper": 74.0,
+      "representative": 70.0
+    },
+    {
+      "label": ">= 74",
+      "lower": 74.0,
+      "upper": Infinity,
+      "representative": 74.0
+    }
+  ]
+}

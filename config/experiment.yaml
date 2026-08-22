@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# Experiment configuration
+# "Reliable and Explainable Low-Cost CKD Screening in Bangladesh"
+# ---------------------------------------------------------------------------
+# Every value here is read by the scripts in scripts/. Nothing is hard-coded
+# in the analysis modules, so changing this file changes the whole study.
+# ---------------------------------------------------------------------------
+
+seed: 20240517          # master seed; all fold seeds are derived from it
+
+paths:
+  raw_csv: data/raw/ckd-dataset-v2.csv
+  processed_dir: data/processed
+  figures_dir: reports/figures
+  tables_dir: reports/tables
+
+data:
+  # The two rows immediately after the CSV header are metadata, not patients.
+  n_metadata_rows: 2
+  target_column: class
+  positive_label: ckd
+  negative_label: notckd
+  # Cell values that are treated as missing after whitespace stripping.
+  missing_tokens: ["", "p", "?", "na", "nan", "null", "-"]
+
+cross_validation:
+  outer_folds: 5
+  inner_folds: 4
+  # Repeats: 5 repeats x 5 outer folds = 25 independent outer test sets.
+  # Rationale (documented in reports/research_report.md, Methods):
+  #   * n = 200, so each outer test fold holds 40 patients (~26 CKD / ~14 non-CKD).
+  #   * 25 outer test sets is enough to stabilise the mean of fold-level metrics
+  #     while keeping the full grid (6 configs x 6 models x 3 calibrations)
+  #     runnable in well under an hour on 12 cores.
+  #   * Increasing repeats reduces CV partition noise but CANNOT reduce the
+  #     dominant source of uncertainty here, which is the 200-patient sample
+  #     itself. That is quantified separately by patient-level bootstrap.
+  repeats: 5
+  # Metric optimised in the INNER loop only. Never computed on outer test data
+  # for the purpose of model selection.
+  inner_scoring: roc_auc
+
+evaluation:
+  # Primary, prespecified operating point.
+  primary_threshold: 0.5
+  # Screening operating point: the lowest threshold reaching this sensitivity
+  # on INNER cross-validated predictions of the outer TRAINING fold only.
+  target_sensitivity: 0.90
+  bootstrap_iterations: 2000
+  bootstrap_ci: 0.95
+  calibration_bins: 10
+
+calibration_methods: [none, sigmoid, isotonic]
+
+models: [dummy, logreg, random_forest, svm, xgboost, ebm]
+
+feature_configs:
+  - leaky_model
+  - full_valid_model
+  - low_cost_model
+  - laboratory_model
+  - clinical_only_model
+  - low_cost_plus_urine_micro_model
+
+# Configuration used for the in-depth explainability / stability analysis.
+# The concrete model is chosen from nested-CV results by the documented rule in
+# scripts/05_importance_stability.py (best valid model by mean ROC-AUC,
+# ties broken by Brier score), not by hand.
+stability:
+  permutation_repeats: 20
+  top_k: 5

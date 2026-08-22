@@ -1,0 +1,145 @@
+variable,tier,level,n,n_ckd,n_notckd,proportion_ckd
+age,history,12 - 20,4,3,1,0.75
+age,history,20 - 27,10,3,7,0.3
+age,history,27 - 35,14,3,11,0.2143
+age,history,35 - 43,12,5,7,0.4167
+age,history,43 - 51,31,18,13,0.5806
+age,history,51 - 59,33,20,13,0.6061
+age,history,59 - 66,48,38,10,0.7917
+age,history,66 - 74,34,27,7,0.7941
+age,history,< 12,4,4,0,1.0
+age,history,>= 74,10,7,3,0.7
+bp (Diastolic),exam,0,92,54,38,0.587
+bp (Diastolic),exam,1,108,74,34,0.6852
+bp limit,exam,0,95,56,39,0.5895
+bp limit,exam,1,59,26,33,0.4407
+bp limit,exam,2,46,46,0,1.0
+htn,history,0,122,50,72,0.4098
+htn,history,1,78,78,0,1.0
+dm,history,0,130,58,72,0.4462
+dm,history,1,70,70,0,1.0
+cad,history,0,178,106,72,0.5955
+cad,history,1,22,22,0,1.0
+appet,history,0,160,88,72,0.55
+appet,history,1,40,40,0,1.0
+pe,exam,0,165,93,72,0.5636
+pe,exam,1,35,35,0,1.0
+ane,blood_lab,0,168,96,72,0.5714
+ane,blood_lab,1,32,32,0,1.0
+sg,urine_dip,1.009 - 1.011,45,45,0,1.0
+sg,urine_dip,1.015 - 1.017,36,36,0,1.0
+sg,urine_dip,1.019 - 1.021,75,38,37,0.5067
+sg,urine_dip,< 1.007,3,3,0,1.0
+sg,urine_dip,>= 1.023,41,6,35,0.1463
+al,urine_dip,1 - 1,21,21,0,1.0
+al,urine_dip,2 - 2,27,27,0,1.0
+al,urine_dip,3 - 3,23,23,0,1.0
+al,urine_dip,< 0,116,44,72,0.3793
+al,urine_dip,>= 4,13,13,0,1.0
+su,urine_dip,1 - 2,6,6,0,1.0
+su,urine_dip,2 - 2,9,9,0,1.0
+su,urine_dip,3 - 4,8,8,0,1.0
+su,urine_dip,4 - 4,6,6,0,1.0
+su,urine_dip,< 0,170,98,72,0.5765
+su,urine_dip,>= 4,1,1,0,1.0
+rbc,urine_micro,0,175,103,72,0.5886
+rbc,urine_micro,1,25,25,0,1.0
+pc,urine_micro,0,155,83,72,0.5355
+pc,urine_micro,1,45,45,0,1.0
+pcc,urine_micro,0,173,101,72,0.5838
+pcc,urine_micro,1,27,27,0,1.0
+ba,urine_micro,0,189,117,72,0.619
+ba,urine_micro,1,11,11,0,1.0
+bgr,blood_lab,112 - 154,79,43,36,0.5443
+bgr,blood_lab,154 - 196,13,13,0,1.0
+bgr,blood_lab,196 - 238,14,14,0,1.0
+bgr,blood_lab,238 - 280,11,11,0,1.0
+bgr,blood_lab,280 - 322,4,4,0,1.0
+bgr,blood_lab,322 - 364,1,1,0,1.0
+bgr,blood_lab,364 - 406,1,1,0,1.0
+bgr,blood_lab,406 - 448,4,4,0,1.0
+bgr,blood_lab,< 112,70,34,36,0.4857
+bgr,blood_lab,>= 448,3,3,0,1.0
+bu,blood_lab,124.3 - 162.4,11,11,0,1.0
+bu,blood_lab,162.4 - 200.5,5,5,0,1.0
+bu,blood_lab,200.5 - 238.6,5,5,0,1.0
+bu,blood_lab,238.6 - 276.7,1,1,0,1.0
+bu,blood_lab,48.1 - 86.2,53,44,9,0.8302
+bu,blood_lab,86.2 - 124.3,16,16,0,1.0
+bu,blood_lab,< 48.1,108,45,63,0.4167
+bu,blood_lab,>= 352.9,1,1,0,1.0
+sc,blood_lab,13.1 - 16.25,4,4,0,1.0
+sc,blood_lab,16.25 - 19.4,1,1,0,1.0
+sc,blood_lab,3.65 - 6.8,22,22,0,1.0
+sc,blood_lab,6.8 - 9.95,9,9,0,1.0
+sc,blood_lab,9.95 - 13.1,4,4,0,1.0
+sc,blood_lab,< 3.65,159,87,72,0.5472
+sc,blood_lab,>= 28.85,1,1,0,1.0
+sod,blood_lab,118 - 123,3,3,0,1.0
+sod,blood_lab,123 - 128,6,6,0,1.0
+sod,blood_lab,128 - 133,14,14,0,1.0
+sod,blood_lab,133 - 138,92,70,22,0.7609
+sod,blood_lab,138 - 143,49,28,21,0.5714
+sod,blood_lab,143 - 148,22,2,20,0.0909
+sod,blood_lab,148 - 153,9,0,9,0.0
+sod,blood_lab,< 118,4,4,0,1.0
+sod,blood_lab,>= 158,1,1,0,1.0
+pot,blood_lab,38.18 - 42.59,1,1,0,1.0
+pot,blood_lab,7.31 - 11.72,1,1,0,1.0
+pot,blood_lab,< 7.31,197,125,72,0.6345
+pot,blood_lab,>= 42.59,1,1,0,1.0
+hemo,blood_lab,10 - 11.3,28,28,0,1.0
+hemo,blood_lab,11.3 - 12.6,49,45,4,0.9184
+hemo,blood_lab,12.6 - 13.9,19,7,12,0.3684
+hemo,blood_lab,13.9 - 15.2,26,5,21,0.1923
+hemo,blood_lab,15.2 - 16.5,20,0,20,0.0
+hemo,blood_lab,6.1 - 7.4,4,4,0,1.0
+hemo,blood_lab,7.4 - 8.7,12,12,0,1.0
+hemo,blood_lab,8.7 - 10,23,23,0,1.0
+hemo,blood_lab,< 6.1,4,4,0,1.0
+hemo,blood_lab,>= 16.5,15,0,15,0.0
+pcv,blood_lab,17.9 - 21.8,3,3,0,1.0
+pcv,blood_lab,21.8 - 25.7,10,10,0,1.0
+pcv,blood_lab,25.7 - 29.6,18,18,0,1.0
+pcv,blood_lab,29.6 - 33.5,22,22,0,1.0
+pcv,blood_lab,33.5 - 37.4,23,23,0,1.0
+pcv,blood_lab,37.4 - 41.3,56,43,13,0.7679
+pcv,blood_lab,41.3 - 45.2,29,4,25,0.1379
+pcv,blood_lab,45.2 - 49.1,17,2,15,0.1176
+pcv,blood_lab,< 17.9,3,3,0,1.0
+pcv,blood_lab,>= 49.1,19,0,19,0.0
+rbcc,blood_lab,2.69 - 3.28,7,7,0,1.0
+rbcc,blood_lab,3.28 - 3.87,21,21,0,1.0
+rbcc,blood_lab,3.87 - 4.46,21,20,1,0.9524
+rbcc,blood_lab,4.46 - 5.05,96,72,24,0.75
+rbcc,blood_lab,5.05 - 5.64,23,2,21,0.087
+rbcc,blood_lab,5.64 - 6.23,18,1,17,0.0556
+rbcc,blood_lab,6.23 - 6.82,9,0,9,0.0
+rbcc,blood_lab,< 2.69,4,4,0,1.0
+rbcc,blood_lab,>= 7.41,1,1,0,1.0
+wbcc,blood_lab,12120 - 14500,6,6,0,1.0
+wbcc,blood_lab,14500 - 16880,6,6,0,1.0
+wbcc,blood_lab,16880 - 19260,2,2,0,1.0
+wbcc,blood_lab,19260 - 21640,1,1,0,1.0
+wbcc,blood_lab,4980 - 7360,47,21,26,0.4468
+wbcc,blood_lab,7360 - 9740,98,67,31,0.6837
+wbcc,blood_lab,9740 - 12120,29,18,11,0.6207
+wbcc,blood_lab,< 4980,10,6,4,0.6
+wbcc,blood_lab,>= 24020,1,1,0,1.0
+grf,derived_dx,102.115 - 127.281,15,3,12,0.2
+grf,derived_dx,127.281 - 152.446,11,3,8,0.2727
+grf,derived_dx,152.446 - 177.612,9,0,9,0.0
+grf,derived_dx,177.612 - 202.778,8,1,7,0.125
+grf,derived_dx,202.778 - 227.944,3,0,3,0.0
+grf,derived_dx,26.6175 - 51.7832,38,36,2,0.9474
+grf,derived_dx,51.7832 - 76.949,28,12,16,0.4286
+grf,derived_dx,76.949 - 102.115,17,4,13,0.2353
+grf,derived_dx,< 26.6175,68,66,2,0.9706
+grf,derived_dx,>= 227.944,2,2,0,1.0
+stage,derived_dx,s1,54,9,45,0.1667
+stage,derived_dx,s2,35,12,23,0.3429
+stage,derived_dx,s3,31,31,0,1.0
+stage,derived_dx,s4,45,41,4,0.9111
+stage,derived_dx,s5,35,35,0,1.0
+affected,target,0,72,0,72,0.0
+affected,target,1,128,128,0,1.0

@@ -1,0 +1,4 @@
+# Byte-exact repository: no line-ending conversion, ever.
+# The raw dataset is SHA-256-checksummed on every load (guarantee G4);
+# autocrlf rewriting would silently break that guarantee on checkout.
+* -text
