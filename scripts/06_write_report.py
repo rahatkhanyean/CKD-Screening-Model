@@ -1783,51 +1783,55 @@ def main() -> int:
     w("")
 
     # ---------------- 5.17 Encoding robustness ----------------
-    enc = t("table_37_encoding_robustness.csv")
-    w("### 5.17 Does the choice of encoding drive any result?")
-    w("")
-    w("Section 5.16 replaced the bins with the underlying measurements and "
-      "changed nothing. The complementary question is whether the *number* "
-      "chosen to represent each bin matters. Four encodings were compared "
-      "on the identical design, seeds and folds: the reference midpoint "
-      "encoding; the bin's ordinal position, discarding spacing; that "
-      "position on a Gaussian-like spacing; and one indicator per bin, "
-      "discarding order entirely. All four are pure functions of a cell's "
-      "label and the published bin list, so all are leakage-safe by the "
-      "same argument as the reference encoding.")
-    w("")
-    summary = (
-        enc.groupby("encoding")
-        .agg(n_cells=("roc_auc", "size"),
-             median_auc=("roc_auc", "median"),
-             worst_delta=("delta_vs_midpoint", lambda s: s.abs().max()),
-             columns=("n_encoded_columns", "max"))
-        .reset_index()
-    )
-    w("| Encoding | Cells | Max columns | Median ROC-AUC | Largest deviation from midpoint |")
-    w("|---|---:|---:|---:|---:|")
-    for _, r in summary.iterrows():
-        w(f"| `{r['encoding']}` | {int(r['n_cells'])} | {int(r['columns'])} | "
-          f"{fmt(r['median_auc'])} | {r['worst_delta']:.4f} |")
-    w("")
-    non_ref = summary[summary["encoding"] != "midpoint"]
-    worst_enc = non_ref.loc[non_ref["worst_delta"].idxmax()]
-    w(f"The largest deviation from the reference encoding across every "
-      f"cell and every alternative is {worst_enc['worst_delta']:.4f} "
-      f"ROC-AUC (`{worst_enc['encoding']}`), inside the bootstrap "
-      f"intervals of section 5.8. The representative-value choice is "
-      f"therefore not load-bearing: neither discarding the spacing between "
-      f"bins, nor discarding their order altogether, moves the results "
-      f"materially.")
-    w("")
-    w("Taken with section 5.16 this is a reasonably complete answer to the "
-      "representation question. The published data can be re-expressed as "
-      "ordinal ranks, as unordered indicators, or replaced outright by the "
-      "measurements they were derived from, and the models land in the "
-      "same place each time. That is a further symptom of the ceiling "
-      "rather than a virtue of the encoding: when a sample separates as "
-      "easily as this one, most reasonable representations of it will do.")
-    w("")
+    enc_path = TABLES / "table_37_encoding_robustness.csv"
+    if enc_path.is_file():
+        enc = t("table_37_encoding_robustness.csv")
+        w("### 5.17 Does the choice of encoding drive any result?")
+        w("")
+        w("Section 5.16 replaced the bins with the underlying measurements "
+          "and changed nothing. The complementary question is whether the "
+          "*number* chosen to represent each bin matters. Four encodings "
+          "were compared on the identical design, seeds and folds: the "
+          "reference midpoint encoding; the bin's ordinal position, "
+          "discarding spacing; that position on a Gaussian-like spacing; "
+          "and one indicator per bin, discarding order entirely. All four "
+          "are pure functions of a cell's label and the published bin "
+          "list, so all are leakage-safe by the same argument as the "
+          "reference encoding.")
+        w("")
+        summary = (
+            enc.groupby("encoding")
+            .agg(n_cells=("roc_auc", "size"),
+                 median_auc=("roc_auc", "median"),
+                 worst_delta=("delta_vs_midpoint", lambda s: s.abs().max()),
+                 columns=("n_encoded_columns", "max"))
+            .reset_index()
+        )
+        w("| Encoding | Cells | Max columns | Median ROC-AUC | Largest deviation from midpoint |")
+        w("|---|---:|---:|---:|---:|")
+        for _, r in summary.iterrows():
+            w(f"| `{r['encoding']}` | {int(r['n_cells'])} | {int(r['columns'])} | "
+              f"{fmt(r['median_auc'])} | {r['worst_delta']:.4f} |")
+        w("")
+        non_ref = summary[summary["encoding"] != "midpoint"]
+        worst_enc = non_ref.loc[non_ref["worst_delta"].idxmax()]
+        w(f"The largest deviation from the reference encoding across every "
+          f"cell and every alternative is {worst_enc['worst_delta']:.4f} "
+          f"ROC-AUC (`{worst_enc['encoding']}`), inside the bootstrap "
+          f"intervals of section 5.8. The representative-value choice is "
+          f"therefore not load-bearing: neither discarding the spacing "
+          f"between bins, nor discarding their order altogether, moves the "
+          f"results materially.")
+        w("")
+        w("Taken with section 5.16 this is a reasonably complete answer to "
+          "the representation question. The published data can be "
+          "re-expressed as ordinal ranks, as unordered indicators, or "
+          "replaced outright by the measurements they were derived from, "
+          "and the models land in the same place each time. That is a "
+          "further symptom of the ceiling rather than a virtue of the "
+          "encoding: when a sample separates as easily as this one, most "
+          "reasonable representations of it will do.")
+        w("")
 
     # ---------------- 5.18 Honest uncertainty ----------------
     proc_boot_path = TABLES / "table_38_procedure_bootstrap.csv"
