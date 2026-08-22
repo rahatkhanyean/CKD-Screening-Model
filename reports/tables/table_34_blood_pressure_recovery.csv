@@ -1,0 +1,6 @@
+encoded_column,encoded_level,n,diastolic_min_mmhg,diastolic_max_mmhg,diastolic_median_mmhg
+bp (Diastolic),0,82,50.0,70.0,70.0
+bp (Diastolic),1,101,60.0,120.0,80.0
+bp limit,0,85,50.0,110.0,70.0
+bp limit,1,54,80.0,80.0,80.0
+bp limit,2,44,90.0,120.0,90.0

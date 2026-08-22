@@ -535,6 +535,76 @@ The consequence for the published record is direct. Of the 13 studies surveyed i
 
 Two implications follow for this report. First, the study has no external validation and cannot acquire one from these sources; every estimate here is internal, and the gate that produced this finding also blocks the 2015 release from every external-validation table (`tests/test_external.py::TestProvenanceGate`). Second, because the overlap is with a *continuous-valued* release of the same patients, the information destroyed by pre-discretisation can be recovered for this cohort and measured directly - a comparison that is possible precisely because the cohorts are not independent.
 
+### 5.15 What the published binning destroyed (and what the file supplied in place of missing data)
+
+Section 5.14 established that these patients appear, with their measurements intact, in a continuous-valued release. That makes a normally unanswerable question answerable: what did the interval encoding cost? Because the comparison is between two representations of **the same 187 patients**, there is no population shift, no case-mix difference and no sampling variation to confound it. Each variable below is scored on the patients whose value the source actually recorded, so the comparison isolates the encoding.
+
+| Variable | n | ROC-AUC binned | ROC-AUC continuous | Lost to binning |
+|---|---:|---:|---:|---:|
+| `sc` | 177 | 0.680 | 0.946 | +0.2662 |
+| `pot` | 150 | 0.518 | 0.588 | +0.0700 |
+| `sod` | 150 | 0.806 | 0.820 | +0.0144 |
+| `wbcc` | 141 | 0.609 | 0.620 | +0.0112 |
+| `bu` | 176 | 0.786 | 0.794 | +0.0077 |
+| `pcv` | 156 | 0.970 | 0.975 | +0.0042 |
+| `rbcc` | 129 | 0.928 | 0.929 | +0.0013 |
+| `sg` | 165 | 0.913 | 0.913 | +0.0000 |
+| `su` | 164 | 0.639 | 0.639 | +0.0000 |
+| `al` | 164 | 0.881 | 0.881 | +0.0000 |
+| `hemo` | 165 | 0.985 | 0.985 | -0.0002 |
+| `age` | 184 | 0.652 | 0.651 | -0.0006 |
+| `bgr` | 171 | 0.727 | 0.720 | -0.0071 |
+
+**The loss is concentrated in one variable, and it is the diagnostically decisive one.** For every variable except `sc` the encoding costs at most 0.0700 ROC-AUC - the bins are fine enough to preserve the signal. Serum creatinine loses 0.2662, falling from 0.946 to 0.680. The published bins show why:
+
+| Published bin | n | Continuous span (mg/dL) | Fraction CKD |
+|---|---:|---|---:|
+| `< 3.65` | 137 | 0.5 - 3.6 | 0.52 |
+| `3.65 - 6.8` | 21 | 3.9 - 6.7 | 1.00 |
+| `6.8 - 9.95` | 9 | 7.1 - 9.7 | 1.00 |
+| `9.95 - 13.1` | 4 | 10.2 - 12.8 | 1.00 |
+| `13.1 - 16.25` | 4 | 13.4 - 15.2 | 1.00 |
+| `16.25 - 19.4` | 1 | 18.1 - 18.1 | 1.00 |
+| `>= 28.85` | 1 | 32.0 - 32.0 | 1.00 |
+
+The first bin absorbs 137 of 177 patients and spans 0.5 to 3.6 mg/dL - from unambiguously normal (0.6-1.2) through severe renal impairment. Every other bin is 1.00 CKD or higher. In this release serum creatinine is therefore not a graded measurement but a coarse flag that fires only once creatinine is already extreme, and inside the bin holding most of the cohort it carries almost no information (0.52 CKD).
+
+This has a consequence for how the leakage boundary should be read. This study excluded `grf` (eGFR) as a post-diagnosis derivative but retained serum creatinine, on the grounds that it is a routinely measured analyte rather than a diagnostic label. On the released data that judgement is comfortable, because binning has flattened the variable. On the underlying measurements it is much less so: creatinine alone reaches ROC-AUC 0.946, which is close to the quantity that defines the outcome. A study using the continuous release would need to defend that inclusion far more carefully than one using this file - and would not know it from this file alone.
+
+**A second property of the release surfaces at the same time.** The analysed file contains exactly one missing cell. Its source contains a great many: across the recoverable variables, 339 cells that the source leaves blank carry a value here. For **all 13 of 13** variables, every one of those cells was filled with a *single constant* - and in each case that constant is the clinically normal range:
+
+| Variable | Cells filled | Value supplied | Distinct values used | Odds of being unobserved, CKD vs non-CKD |
+|---|---:|---|---:|---:|
+| `age` | 3 | `51 - 59` | 1 | infinite |
+| `rbcc` | 58 | `4.46 - 5.05` | 1 | 31.2 |
+| `wbcc` | 46 | `7360 - 9740` | 1 | 20.5 |
+| `pcv` | 31 | `37.4 - 41.3` | 1 | 11.2 |
+| `pot` | 37 | `< 7.31` | 1 | 4.9 |
+| `sod` | 37 | `133 - 138` | 1 | 4.9 |
+| `al` | 23 | `< 0` | 1 | 4.6 |
+| `su` | 23 | `< 0` | 1 | 4.6 |
+| `sg` | 22 | `1.019 - 1.021` | 1 | 4.3 |
+| `hemo` | 22 | `11.3 - 12.6` | 1 | 3.0 |
+| `bgr` | 16 | `112 - 154` | 1 | 1.9 |
+| `sc` | 10 | `< 3.65` | 1 | 0.9 |
+| `bu` | 11 | `48.1 - 86.2` | 1 | 0.7 |
+
+The missingness is not random. A patient with CKD is 5 to 31 times more likely to have these measurements absent from the source, which is what one would expect when tests are ordered selectively. Filling every such cell with the normal value therefore assigns normal-looking laboratory results to precisely the patients most likely to be ill, and does so invisibly: nothing in the released file distinguishes a measured normal result from a supplied one.
+
+**Its direction is worth stating plainly, because it runs against this report's own thesis.** Every other mechanism examined here inflates measured performance. This one deflates it: substituting normal values for the sickest patients makes the classes harder to separate, not easier. Comparing each variable's separability across all pinned patients against the observed subset suggests an attenuation of up to 0.0652 ROC-AUC (largest for `al`), though that comparison is across different patient subsets and should be read as indicative rather than exact. The practical implication is not that the benchmark is harder than it looks - it is that a third of some columns are not measurements at all, which no analysis of the released file can discover.
+
+**Two undocumented variables are resolved as a by-product.** Section 3.6 flags `bp (Diastolic)` and `bp limit` as variables whose coding could not be established from the file. Against the recovered measurements they read directly:
+
+| Encoded column | Level | n | Diastolic range (mmHg) | Median |
+|---|---|---:|---|---:|
+| `bp (Diastolic)` | 0 | 82 | 50 - 70 | 70 |
+| `bp (Diastolic)` | 1 | 101 | 60 - 120 | 80 |
+| `bp limit` | 0 | 85 | 50 - 110 | 70 |
+| `bp limit` | 1 | 54 | 80 - 80 | 80 |
+| `bp limit` | 2 | 44 | 90 - 120 | 90 |
+
+`bp (Diastolic)` is an indicator for diastolic pressure at or above 80 mmHg, and `bp limit` bands the same measurement into at-or-below 70 / exactly 80 / at-or-above 90. Both readings hold for every pinned patient but a handful (one record coded 1 at 60 mmHg; two coded 0 at 100 and 110 mmHg), which are further instances of the data-entry noise documented in section 3.4. The uncertainty flags on these variables can now be removed - but only because a second release of the same patients existed.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -656,6 +726,7 @@ What the study does not support is any claim about clinical utility, causality, 
 - `fig_r11_shap_capable_shap_vs_permutation.png`
 - `fig_r12_spectrum_effect.png`
 - `fig_r13_ebm_shapes.png`
+- `fig_r14_binning_cost.png`
 - `fig_r1_auc_heatmap.png`
 - `fig_r2_leakage_audit.png`
 - `fig_r3_screening_metrics.png`
@@ -704,3 +775,8 @@ What the study does not support is any claim about clinical utility, causality, 
 - `table_28_ebm_shape_summary.csv`
 - `table_28_ebm_vs_svm.csv`
 - `table_29_optimism.csv`
+- `table_30_recovery_coverage.csv`
+- `table_31_binning_cost.csv`
+- `table_32_imputation_audit.csv`
+- `table_33_sc_bin_structure.csv`
+- `table_34_blood_pressure_recovery.csv`

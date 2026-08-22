@@ -1585,6 +1585,148 @@ def main() -> int:
       "that is possible precisely because the cohorts are not independent.")
     w("")
 
+    # ---------------- 5.15 What the binning cost ----------------
+    costs = t("table_31_binning_cost.csv")
+    imput = t("table_32_imputation_audit.csv")
+    sc_bins = t("table_33_sc_bin_structure.csv")
+    bp_rec = t("table_34_blood_pressure_recovery.csv")
+    coverage = t("table_30_recovery_coverage.csv")
+    n_pinned_rec = int(coverage["n_pinned"].iloc[0])
+    w("### 5.15 What the published binning destroyed (and what the file "
+      "supplied in place of missing data)")
+    w("")
+    w(f"Section 5.14 established that these patients appear, with their "
+      f"measurements intact, in a continuous-valued release. That makes a "
+      f"normally unanswerable question answerable: what did the interval "
+      f"encoding cost? Because the comparison is between two "
+      f"representations of **the same {n_pinned_rec} patients**, there is "
+      f"no population shift, no case-mix difference and no sampling "
+      f"variation to confound it. Each variable below is scored on the "
+      f"patients whose value the source actually recorded, so the "
+      f"comparison isolates the encoding.")
+    w("")
+    w("| Variable | n | ROC-AUC binned | ROC-AUC continuous | Lost to binning |")
+    w("|---|---:|---:|---:|---:|")
+    for _, r in costs.iterrows():
+        w(f"| `{r['variable']}` | {int(r['n_observed'])} | "
+          f"{fmt(r['auc_binned_observed_only'])} | "
+          f"{fmt(r['auc_continuous_observed_only'])} | "
+          f"{r['binning_cost']:+.4f} |")
+    w("")
+    worst = costs.iloc[0]
+    others = costs[costs["variable"] != worst["variable"]]["binning_cost"].abs().max()
+    w(f"**The loss is concentrated in one variable, and it is the "
+      f"diagnostically decisive one.** For every variable except "
+      f"`{worst['variable']}` the encoding costs at most "
+      f"{others:.4f} ROC-AUC - the bins are fine enough to preserve the "
+      f"signal. Serum creatinine loses "
+      f"{float(worst['binning_cost']):.4f}, falling from "
+      f"{fmt(worst['auc_continuous_observed_only'])} to "
+      f"{fmt(worst['auc_binned_observed_only'])}. The published bins show "
+      f"why:")
+    w("")
+    w("| Published bin | n | Continuous span (mg/dL) | Fraction CKD |")
+    w("|---|---:|---|---:|")
+    for _, r in sc_bins.iterrows():
+        w(f"| `{r['published_bin']}` | {int(r['n'])} | "
+          f"{r['continuous_min']:.1f} - {r['continuous_max']:.1f} | "
+          f"{fmt(r['ckd_fraction'], 2)} |")
+    w("")
+    widest = sc_bins.loc[sc_bins["continuous_span"].idxmax()]
+    w(f"The first bin absorbs {int(widest['n'])} of "
+      f"{int(sc_bins['n'].sum())} patients and spans "
+      f"{widest['continuous_min']:.1f} to {widest['continuous_max']:.1f} "
+      f"mg/dL - from unambiguously normal (0.6-1.2) through severe renal "
+      f"impairment. Every other bin is {fmt(sc_bins.iloc[1:]['ckd_fraction'].min(), 2)} "
+      f"CKD or higher. In this release serum creatinine is therefore not a "
+      f"graded measurement but a coarse flag that fires only once "
+      f"creatinine is already extreme, and inside the bin holding most of "
+      f"the cohort it carries almost no information "
+      f"({fmt(widest['ckd_fraction'], 2)} CKD).")
+    w("")
+    w("This has a consequence for how the leakage boundary should be read. "
+      "This study excluded `grf` (eGFR) as a post-diagnosis derivative but "
+      "retained serum creatinine, on the grounds that it is a routinely "
+      "measured analyte rather than a diagnostic label. On the released "
+      "data that judgement is comfortable, because binning has flattened "
+      "the variable. On the underlying measurements it is much less so: "
+      f"creatinine alone reaches ROC-AUC "
+      f"{fmt(worst['auc_continuous_observed_only'])}, which is close to "
+      "the quantity that defines the outcome. A study using the "
+      "continuous release would need to defend that inclusion far more "
+      "carefully than one using this file - and would not know it from "
+      "this file alone.")
+    w("")
+    n_imputed_cells = int(imput["n_unobserved_in_source"].sum())
+    n_const = int((imput["n_distinct_labels_assigned"] == 1).sum())
+    w(f"**A second property of the release surfaces at the same time.** "
+      f"The analysed file contains exactly one missing cell. Its source "
+      f"contains a great many: across the recoverable variables, "
+      f"{n_imputed_cells} cells that the source leaves blank carry a value "
+      f"here. For **all {n_const} of {len(imput)}** variables, every one of "
+      f"those cells was filled with a *single constant* - and in each case "
+      f"that constant is the clinically normal range:")
+    w("")
+    w("| Variable | Cells filled | Value supplied | Distinct values used | Odds of being unobserved, CKD vs non-CKD |")
+    w("|---|---:|---|---:|---:|")
+    for _, r in imput.iterrows():
+        odds = r["missingness_odds_ratio_ckd"]
+        odds_txt = "infinite" if not np.isfinite(odds) else f"{odds:.1f}"
+        w(f"| `{r['variable']}` | {int(r['n_unobserved_in_source'])} | "
+          f"`{r['assigned_label']}` | {int(r['n_distinct_labels_assigned'])} | "
+          f"{odds_txt} |")
+    w("")
+    strong = imput[imput["n_unobserved_in_source"] >= 30]
+    w(f"The missingness is not random. A patient with CKD is "
+      f"{strong['missingness_odds_ratio_ckd'].min():.0f} to "
+      f"{strong['missingness_odds_ratio_ckd'].max():.0f} times more likely "
+      f"to have these measurements absent from the source, which is what "
+      f"one would expect when tests are ordered selectively. Filling every "
+      f"such cell with the normal value therefore assigns normal-looking "
+      f"laboratory results to precisely the patients most likely to be "
+      f"ill, and does so invisibly: nothing in the released file "
+      f"distinguishes a measured normal result from a supplied one.")
+    w("")
+    w("**Its direction is worth stating plainly, because it runs against "
+      "this report's own thesis.** Every other mechanism examined here "
+      "inflates measured performance. This one deflates it: substituting "
+      "normal values for the sickest patients makes the classes harder to "
+      "separate, not easier. Comparing each variable's separability across "
+      "all pinned patients against the observed subset suggests an "
+      f"attenuation of up to "
+      f"{costs['attenuation_from_imputed_rows'].max():.4f} ROC-AUC "
+      f"(largest for `{costs.loc[costs['attenuation_from_imputed_rows'].idxmax(), 'variable']}`), "
+      "though that comparison is across different patient subsets and "
+      "should be read as indicative rather than exact. The practical "
+      "implication is not that the benchmark is harder than it looks - it "
+      "is that a third of some columns are not measurements at all, which "
+      "no analysis of the released file can discover.")
+    w("")
+    if len(bp_rec):
+        flag = bp_rec[bp_rec["encoded_column"] == "bp (Diastolic)"]
+        limit = bp_rec[bp_rec["encoded_column"] == "bp limit"]
+        w("**Two undocumented variables are resolved as a by-product.** "
+          "Section 3.6 flags `bp (Diastolic)` and `bp limit` as variables "
+          "whose coding could not be established from the file. Against "
+          "the recovered measurements they read directly:")
+        w("")
+        w("| Encoded column | Level | n | Diastolic range (mmHg) | Median |")
+        w("|---|---|---:|---|---:|")
+        for _, r in bp_rec.iterrows():
+            w(f"| `{r['encoded_column']}` | {r['encoded_level']} | {int(r['n'])} | "
+              f"{r['diastolic_min_mmhg']:.0f} - {r['diastolic_max_mmhg']:.0f} | "
+              f"{r['diastolic_median_mmhg']:.0f} |")
+        w("")
+        w("`bp (Diastolic)` is an indicator for diastolic pressure at or "
+          "above 80 mmHg, and `bp limit` bands the same measurement into "
+          "at-or-below 70 / exactly 80 / at-or-above 90. Both readings hold "
+          "for every pinned patient but a handful (one record coded 1 at 60 "
+          "mmHg; two coded 0 at 100 and 110 mmHg), which are further "
+          "instances of the data-entry noise documented in section 3.4. "
+          "The uncertainty flags on these variables can now be removed - "
+          "but only because a second release of the same patients existed.")
+        w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
