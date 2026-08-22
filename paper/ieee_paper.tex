@@ -1,0 +1,874 @@
+%==============================================================================
+%  Three Mechanisms Inflate Reported Performance on a Widely Used Public
+%  Chronic Kidney Disease Benchmark
+%
+%  IEEE conference format (IEEEtran). To build:
+%      pdflatex ieee_paper && pdflatex ieee_paper
+%  (run twice so cross-references resolve).
+%
+%  For the journal format instead, change the class options on the next
+%  line to [journal]{IEEEtran} and remove \IEEEpeerreviewmaketitle.
+%
+%  Every numerical value in this paper is taken from a generated table in
+%  reports/tables/ of the accompanying repository. The comment above each
+%  table names its source file.
+%==============================================================================
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Compact, consistent table type.
+\newcommand{\tabhead}[1]{\textbf{#1}}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{document}
+
+\title{Three Mechanisms Inflate Reported Performance\\
+on a Widely Used Public Chronic Kidney Disease Benchmark}
+
+%------------------------------------------------------------------------------
+% TODO(author): replace the placeholder block below before submission.
+% Left unfilled deliberately rather than guessed.
+%------------------------------------------------------------------------------
+\author{\IEEEauthorblockN{Author Name}
+\IEEEauthorblockA{\textit{Department} \\
+\textit{Institution}\\
+City, Country \\
+email@institution.edu}
+}
+
+\maketitle
+
+%==============================================================================
+\begin{abstract}
+Machine-learning studies on the public UCI chronic kidney disease (CKD)
+benchmarks routinely report accuracy at or near 100\%. We ask what produces
+those numbers. Under repeated nested cross-validation with programmatically
+enforced leakage control, we identify and quantify three distinct mechanisms,
+none of which is predictive ability. First, \emph{target leakage}: the
+released file contains an exact copy of the outcome, a post-diagnosis stage
+label, and the diagnostic eGFR value; including them takes every feature
+configuration to ROC-AUC 1.000. Second, and larger, \emph{case-mix
+composition}: with every prohibited column removed, models still separate all
+200 patients out of fold, because 84\% of cases carry stage 3--5 disease and
+haemoglobin alone reaches univariate ROC-AUC 0.968; restricted to early-stage
+disease, sensitivity falls from 0.969 to 0.905. Third, and least visible,
+\emph{pseudo-external validation}: a record-level provenance check shows that
+the 2015 and 2020 UCI releases, treated in the literature as independent
+cohorts, share their patients. All 200 patients of the 2020 release match
+into the 2015 release (maximum bipartite match fraction 1.000 against a
+permutation null of $0.003 \pm 0.003$), 187 of them uniquely, with zero
+contradictions across ten categorical variables that took no part in the
+matching. Of 13 surveyed studies, three validate across these releases as
+though independent and one merges them into a single training set. Recovering
+the original measurements further shows that the published discretisation
+destroys 0.266 ROC-AUC of univariate signal in serum creatinine while changing
+no multivariable conclusion, and that 339 missing cells were silently filled
+with constants whose absence is strongly outcome-associated. We release the
+full pipeline, including a reusable provenance gate that blocks
+non-independent cohorts from supporting external claims.
+\end{abstract}
+
+\begin{IEEEkeywords}
+chronic kidney disease, data leakage, spectrum bias, external validation,
+benchmark quality, clinical prediction models, reproducibility
+\end{IEEEkeywords}
+
+%==============================================================================
+\section{Introduction}
+
+Chronic kidney disease affects roughly 9\% of the world's population and
+caused an estimated 1.2 million deaths in 2017, with the burden falling
+disproportionately on regions where diagnostic laboratory capacity is
+limited~\cite{gbd2020}. CKD is defined by abnormalities of kidney structure or
+function persisting beyond three months, operationalised principally through
+estimated glomerular filtration rate (eGFR) and albuminuria~\cite{kdigo2024}.
+Because early CKD is largely asymptomatic, detection depends on testing rather
+than presentation.
+
+That clinical importance is why the public UCI CKD datasets have become
+standard benchmarks: they are small, tidy, and answer a question that matters.
+It is also why results reported on them deserve scrutiny. \emph{A benchmark on
+which almost every method reports near-perfect accuracy has stopped
+discriminating between methods}, and the interesting question becomes what, in
+the data, produces the ceiling.
+
+A structured survey of prior work on this dataset and its parent release
+(Section~\ref{sec:priorwork}) finds every independently verified headline
+metric at or above 99\% accuracy, 9 of 13 studies coded as using serum
+creatinine or eGFR as model inputs, and exactly one with a validation cohort
+that is genuinely external. Such numbers are more often a property of the data
+than evidence of clinical usefulness.
+
+This paper began as an ordinary applied study of whether inexpensive
+variables---history, examination, a urine dipstick---could predict CKD status.
+It was built with leakage control enforced in code and repeated nested
+cross-validation. That construction produced an uncomfortable result: every
+valid configuration sat at the discrimination ceiling, with no prohibited
+column involved. An automated tripwire (``perfect performance means a bug'')
+fired, and the investigation into why became the study.
+
+\subsection{Contributions}
+
+\begin{enumerate}
+  \item We identify and separately quantify \textbf{three mechanisms} that
+        drive measured performance on this benchmark toward 1.0, and show that
+        the largest is not the one the literature discusses.
+  \item We provide \textbf{record-level evidence} that two UCI releases treated
+        as independent cohorts share their patients, invalidating published
+        cross-dataset validations between them, and release the provenance
+        check as reusable, dataset-agnostic machinery.
+  \item We \textbf{recover the original continuous measurements} for the
+        analysed cohort, making the cost of the published discretisation
+        measurable \emph{within-cohort}, and in doing so surface undocumented
+        constant imputation in the released file.
+  \item We report an \textbf{honest uncertainty interval} obtained by
+        bootstrapping the entire nested procedure, which is 1.7--2.7$\times$
+        wider than the conventional prediction-level interval.
+\end{enumerate}
+
+%==============================================================================
+\section{Related Work and Prior Results on This Benchmark}
+\label{sec:priorwork}
+
+Recent surveys of machine learning for CKD~\cite{kabir2026} note that the
+majority of studies rely on the UCI-2015 release~\cite{uci2015}, and that many
+include serum creatinine or eGFR as inputs---a practice Kabir \emph{et al.}
+describe as introducing ``information leakage and circular reasoning,'' since
+those biomarkers are themselves the clinical criteria defining the outcome.
+
+We assembled a structured survey of 13 studies using this dataset or its
+parent release, recording for each the dataset version, the reported headline
+metric, whether post-diagnosis columns were used, and the validation design.
+Every cell states how it was verified. Three studies were verified from full
+text or abstract; the remaining ten carry an explicit
+\texttt{todo\_hand\_check} flag because paywalls blocked verification, and
+their coding is \emph{attributed} to a published comparison
+table~\cite{kabir2026} rather than confirmed. Table~\ref{tab:lit} summarises.
+
+Among the verified studies, Islam \emph{et al.}~\cite{islam2023} report 99.16\%
+accuracy on the 2015 release with serum creatinine among the predictors and no
+external validation, and Hossain \emph{et al.}~\cite{hossain2025} report 99.5\%
+accuracy after \emph{merging} the two releases into a single training set,
+with reported accuracies reaching 100\% in cross-release validation. Both
+figures are consistent with the mechanisms identified below; the second is
+directly affected by the cohort-overlap finding of
+Section~\ref{sec:mech3}.
+
+% Source: reports/tables/table_26_prior_work_summary.csv
+\begin{table}[t]
+\caption{Structured survey of prior work on this benchmark ($N=13$)}
+\label{tab:lit}
+\centering
+\begin{tabular}{lr}
+\toprule
+\tabhead{Quantity} & \tabhead{Value} \\
+\midrule
+Studies surveyed & 13 \\
+Independently verified by us & 3 \\
+Awaiting hand verification (paywalled) & 10 \\
+Verified headline metrics $\geq 0.99$ & 2 of 3 \\
+Coded as using serum creatinine or eGFR & 9 \\
+Using the 2020 release or a merge of both & 4 \\
+Cross-validating between the two releases & 3 \\
+\textbf{With a genuinely external cohort} & \textbf{1} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The survey is a targeted sample seeded from one paper's reference list. It is
+sufficient to establish that near-perfect results and cross-release validation
+occur; it is not sufficient to estimate how often, and we do not claim
+otherwise.
+
+%==============================================================================
+\section{Data}
+
+\subsection{The analysed release}
+
+We analyse \texttt{ckd-dataset-v2.csv}, 200 patient records in 29 columns,
+distributed by the UCI Machine Learning Repository as \emph{Risk Factor
+Prediction of Chronic Kidney Disease}~\cite{uci2023}. The outcome
+\texttt{class} is 128 CKD (64.0\%) and 72 non-CKD. Two rows immediately
+following the header are metadata, not observations, and are removed in a
+single place in the codebase.
+
+With 72 minority events and 25 candidate predictors in the full valid
+configuration, the dataset provides 2.88 events per predictor---far below
+accepted minimums for prediction-model development~\cite{riley2019}. The study
+is therefore underpowered for model development by construction and is
+presented as a measurement exercise on the benchmark itself.
+
+\subsection{Two properties that shape everything}
+
+\textbf{The data are pre-discretised.} Every continuous variable was binned
+into interval strings before release (\texttt{sg} as
+\texttt{1.019 - 1.021}, \texttt{bgr} as \texttt{< 112}). We encode each label
+by a single representative value---the midpoint of a closed bin, the finite
+edge of an open one. This mapping is a pure function of one cell's text: it
+uses no cross-row statistics and no outcome information, so it cannot transfer
+information between folds, which is why it may legitimately be applied before
+splitting.
+
+\textbf{The documented provenance is contradicted by the data.} The release
+documents collection at a named hospital in Bangladesh. Section~\ref{sec:mech3}
+shows that all 200 of these patients appear in the 2015 UCI
+release~\cite{uci2015}, documented as an Indian hospital. We report the
+measurement and take no view on how the discrepancy arose; readers should
+treat the stated site, country and year as unverified. No claim in this paper
+rests on them.
+
+\subsection{Prohibited columns}
+
+Three columns cannot be legitimate predictors. \texttt{affected} is an exact
+one-to-one copy of the outcome (Cram\'er's $V = 1.0$ across all 200 rows).
+\texttt{stage} is a post-diagnosis staging label, 100\% CKD at stages s3 and
+s5. \texttt{grf} is the eGFR value from which staging is banded and by which
+CKD is defined. A model given these is performing lookup, not prediction: at
+the moment of assessment none of the three exists yet.
+
+%==============================================================================
+\section{Methods}
+
+\subsection{Feature configurations}
+
+Six configurations are compared. \texttt{leaky\_model} (28 variables) is
+\emph{deliberately invalid}: it adds the three prohibited columns and exists
+solely to quantify their effect. It is labelled INVALID in every table and
+figure and is never quoted outside the leakage audit. The valid
+configurations are \texttt{full\_valid} (25), \texttt{laboratory} (14),
+\texttt{low\_cost} (11: history, examination, urine dipstick),
+\texttt{clinical\_only} (8), and \texttt{low\_cost\_plus\_urine\_micro} (15).
+Machine-checked invariants hold: \texttt{clinical\_only} $\subset$
+\texttt{low\_cost} $\subset$ \texttt{full\_valid}, and
+\texttt{low\_cost} $\cup$ \texttt{laboratory} $=$ \texttt{full\_valid}.
+
+The dataset ships no data dictionary. Ten variables whose meaning could not be
+settled from the file are flagged \texttt{uncertain} rather than given
+invented interpretations. The most consequential is \texttt{ane} (anaemia),
+which could be recorded clinically at no cost or read from a blood count;
+because its provenance is unresolved it is excluded from the low-cost
+configuration. This is the conservative choice: it can only \emph{understate}
+low-cost performance.
+
+\subsection{Leakage prevention, enforced in code}
+
+Prevention operates in three independent layers. \emph{Declaration}: a single
+module names every prohibited column and each configuration's exact contents.
+\emph{Runtime guard}: every pipeline begins with a guard that raises at
+\texttt{fit} \textbf{and} at \texttt{transform}, so a prohibited column
+smuggled in at prediction time also fails; it \emph{raises rather than drops},
+because silently dropping would conceal a caller's bug. \emph{Assertion}: a
+cleanliness check runs over every pipeline before any work is done. The key
+adversarial test hands a valid pipeline the \emph{entire} dataframe, including
+all prohibited columns, and requires it to refuse rather than quietly select
+its own subset.
+
+\subsection{Validation design}
+
+Models are evaluated under 5-fold outer, 4-fold inner nested stratified
+cross-validation repeated 5 times, giving 25 independent outer test sets and
+108{,}000 out-of-fold predictions. The nested design is used because selecting
+hyper-parameters and estimating performance on the same folds is a known
+source of optimism~\cite{varma2006}. Six model families are compared: a
+prevalence dummy, penalised logistic regression, random forest, RBF support
+vector machine, XGBoost, and an explainable boosting machine
+(EBM)~\cite{nori2019} configured as a pure additive model. Imputation, scaling, hyper-parameter selection,
+calibration and threshold selection all occur strictly within training folds.
+Uncalibrated, Platt and isotonic probabilities are compared. Confidence
+intervals come from a stratified patient-level bootstrap (2000 resamples);
+Section~\ref{sec:honest} replaces these with an interval for the whole
+procedure.
+
+Calibration slope and intercept follow the standard logistic recalibration
+framework~\cite{vancalster2016}. Two design details are worth stating because
+they change reported numbers. Calibration statistics are computed
+\emph{within} each repeat and then summarised: averaging a patient's
+probability across repeats shrinks it toward the centre and biases the slope
+upward. And complete separation is
+\emph{detected} rather than optimised through---under separation the logistic
+recalibration slope has no maximum-likelihood solution, and an optimiser still
+returns a number (values in the hundreds were observed before the check was
+added), so such slopes are reported as undefined.
+
+\subsection{The provenance gate}
+\label{sec:gate}
+
+Before any dataset may support an external claim, it passes a record-level
+check. Each patient in the analysed file is a vector of intervals over 13
+shared variables. A candidate record is \emph{compatible} with a patient if
+the outcome matches and every shared value falls inside the corresponding
+interval; missing values are treated as compatible, which can only
+\emph{raise} the match fraction and is therefore the conservative direction
+for a gate. We compute the maximum bipartite matching between patients and
+candidate records under this relation, and calibrate the observed matching
+against permutations that shuffle each candidate column independently,
+preserving every marginal distribution while destroying cross-variable
+structure.
+
+The verdict rule---INDEPENDENT, OVERLAPPING, or SAME-SOURCE---is mechanical
+and was fixed in code before any external result existed. An automated test
+enforces that no dataset lacking an INDEPENDENT verdict can appear in any
+external-validation table.
+
+%==============================================================================
+\section{Results}
+
+\subsection{Mechanism 1: target leakage}
+
+Table~\ref{tab:audit} gives the best model per configuration on pooled
+out-of-fold predictions.
+
+% Source: reports/tables/table_13_leakage_audit.csv
+\begin{table}[t]
+\caption{Leakage audit. Best model per configuration, uncalibrated,
+pooled out-of-fold predictions.}
+\label{tab:audit}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lcccc}
+\toprule
+\tabhead{Configuration} & \tabhead{$k$} & \tabhead{ROC-AUC (95\% CI)} &
+\tabhead{Sens.} & \tabhead{Spec.} \\
+\midrule
+Leaky (INVALID) & 28 & 1.000 (1.000--1.000) & 1.000 & 1.000 \\
+Full valid      & 25 & 1.000 (1.000--1.000) & 0.977 & 1.000 \\
+Laboratory      & 14 & 0.995 (0.988--0.999) & 0.969 & 0.972 \\
+Low-cost + micro& 15 & 0.992 (0.980--0.999) & 0.961 & 1.000 \\
+Low-cost        & 11 & 0.992 (0.981--0.999) & 0.961 & 1.000 \\
+Clinical only   &  8 & 0.953 (0.919--0.979) & 0.914 & 0.986 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The invalid configuration reaches ROC-AUC 1.000 with sensitivity and
+specificity both 1.000. Measured against the full valid configuration the
+absolute gain is $0.000$---but this is a ceiling artefact, not evidence that
+leakage is harmless, because that baseline is itself already at 1.000.
+Measured against baselines that retain headroom, leakage closes \textbf{100\%}
+of the remaining error: 0.992 $\rightarrow$ 1.000 for the low-cost set and
+0.953 $\rightarrow$ 1.000 for the clinical-only set. Leakage takes
+\emph{any} configuration to the ceiling.
+
+That the honest baseline is already saturated is itself the finding that
+motivates the next section.
+
+\subsection{Mechanism 2: case-mix composition}
+
+With every prohibited column removed, leakage prevented by a guard that
+raises, and an automated audit confirming no violation across all 36 pipelines
+actually run, the full valid configuration \emph{still} separates all 200
+patients out of fold. This is a property of the sample.
+
+% Source: reports/tables/table_22_univariate_separability.csv
+\begin{table}[t]
+\caption{Univariate separability of individual predictors. No multivariable
+learning is required to separate groups this far apart.}
+\label{tab:sep}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc}
+\toprule
+\tabhead{Predictor} & \tabhead{Univar. ROC-AUC} &
+\tabhead{In shared range} \\
+\midrule
+\texttt{hemo} & 0.968 & 47\% \\
+\texttt{pcv}  & 0.949 & 51\% \\
+\texttt{sg}   & 0.888 & 58\% \\
+\texttt{rbcc} & 0.876 & 84\% \\
+\texttt{al}   & 0.828 & 58\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two facts explain the ceiling. First, single predictors already separate the
+groups: haemoglobin alone achieves univariate ROC-AUC 0.968
+(Table~\ref{tab:sep}). Second, the cohort is dominated by advanced disease:
+107 of 128 CKD patients (84\%) are staged s3--s5, leaving only 21 early-stage
+cases. This is the profile of a case-control-like contrast between established
+kidney failure and comparatively healthy controls---not of a consecutive
+screening series, in which most true cases would be early, asymptomatic and
+biochemically near-normal. Anaemia, low haematocrit and abnormal urine
+concentration are \emph{consequences} of established kidney disease; they are
+precisely the features absent in the patients a screening programme most needs
+to identify.
+
+Restricting to early CKD (s1--s2, $n=21$) versus non-CKD, sensitivity at the
+prespecified threshold falls from 0.969 to 0.905 for the low-cost
+configuration and from 0.891 to 0.762 for the clinical-only configuration
+(Fig.~\ref{fig:spectrum}). These subgroup analyses are exploratory and post
+hoc, and the early subgroup is small; they are reported because the direction
+is consistent across configurations and because the underlying case-mix
+imbalance is a hard fact about the sample rather than an inference.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_r12_spectrum_effect.pdf}
+\caption{Performance by disease-stage subgroup. Discrimination measured on the
+sample as a whole is systematically optimistic relative to the early-stage
+patients that screening exists to find. Panel C shows that single predictors
+already separate the groups, which is why no multivariable learning is
+required to reach the ceiling.}
+\label{fig:spectrum}
+\end{figure*}
+
+\subsection{Mechanism 3: pseudo-external validation}
+\label{sec:mech3}
+
+The two mechanisms above concern a single dataset. The third concerns how the
+dataset is used. Several published studies train on the 2015 UCI release and
+validate on this file---distributed separately, with a different stated
+collection site, sample size and year---and present the result as external
+validation. That inference requires the two releases to contain different
+patients.
+
+They do not. Applying the gate of Section~\ref{sec:gate}
+(Fig.~\ref{fig:prov}):
+
+\begin{itemize}
+  \item \textbf{All 200} patients match into the 2015 release; the maximum
+        bipartite match fraction is \textbf{1.000}, against a permutation null
+        of $\mathbf{0.003 \pm 0.003}$ (maximum 0.015 over 200 shuffles).
+  \item \textbf{187 of 200} patients are compatible with exactly \emph{one}
+        record; the maximum anywhere is two.
+  \item Across those 187 uniquely pinned pairs, \textbf{ten categorical
+        variables that took no part in the matching agree with zero
+        contradictions} ($\approx$1{,}500 comparisons):
+        \texttt{rbc}/\texttt{pc} $1\!\leftrightarrow\!$abnormal,
+        \texttt{pcc}/\texttt{ba} $1\!\leftrightarrow\!$present,
+        \texttt{htn}/\texttt{dm}/\texttt{cad}/\texttt{pe}/\texttt{ane}
+        $1\!\leftrightarrow\!$yes, \texttt{appet}
+        $1\!\leftrightarrow\!$poor.
+\end{itemize}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_r15_provenance_null.pdf}
+\caption{Cohort-overlap evidence. The observed match fraction (1.000) against
+a permutation null that preserves every marginal distribution while destroying
+cross-variable structure. A coincidental alignment does not reproduce ten
+variables that played no part in the matching.}
+\label{fig:prov}
+\end{figure}
+
+A coincidental alignment does not reproduce ten unused variables. The analysed
+file is a discretised subset re-release of the 2015 dataset. Of the 13
+surveyed studies, three validate across the two releases as though they were
+independent cohorts, and one merges them into a single training set before
+reporting accuracy. On this evidence those procedures evaluate models on their
+own training population.
+
+This is not a criticism of those authors. Nothing in either dataset's
+documentation indicates the overlap, and the present study registered the 2015
+release as its \emph{own} primary external-validation candidate before the
+gate refused it.
+
+\subsection{What the discretisation destroyed}
+
+Because the overlap is with a continuous-valued release of the \emph{same
+patients}, the cost of the published binning is measurable within-cohort: no
+population shift, no case-mix difference, no sampling variation. Recovery is
+restricted to the 187 uniquely pinned patients, and every recovered value is
+verified to lie inside its own patient's published interval.
+
+% Source: reports/tables/table_31_binning_cost.csv
+\begin{table}[t]
+\caption{Univariate separability, binned versus recovered continuous values,
+evaluated on the same patients. Selected variables.}
+\label{tab:binning}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\tabhead{Variable} & \tabhead{Binned} & \tabhead{Continuous} &
+\tabhead{Lost to binning} \\
+\midrule
+\texttt{sc}   & 0.680 & 0.946 & $+0.266$ \\
+\texttt{pot}  & 0.518 & 0.588 & $+0.070$ \\
+\texttt{sod}  & 0.806 & 0.820 & $+0.014$ \\
+\texttt{hemo} & 0.985 & 0.985 & $-0.000$ \\
+\texttt{sg}   & 0.913 & 0.913 & $\phantom{-}0.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The loss is concentrated in one variable, and it is the diagnostically
+decisive one (Table~\ref{tab:binning}, Fig.~\ref{fig:binning}). Serum
+creatinine loses \textbf{0.266} ROC-AUC; every other variable loses at most
+0.070. The published bins explain why: the interval \texttt{< 3.65} absorbs
+137 of 177 patients and spans 0.5--3.6~mg/dL---from unambiguously normal
+(0.6--1.2) through severe renal impairment---and is only 52\% CKD, while every
+other bin is 100\% CKD. In this release serum creatinine is not a graded
+measurement but a coarse flag that fires only once creatinine is already
+extreme.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_r14_binning_cost.pdf}
+\caption{Univariate ROC-AUC lost to the published interval encoding, per
+variable, on the same patients. The loss is negligible everywhere except serum
+creatinine.}
+\label{fig:binning}
+\end{figure}
+
+This has a consequence for where the leakage boundary should be drawn. We
+excluded \texttt{grf} as a post-diagnosis derivative but retained serum
+creatinine, on the grounds that it is a routinely measured analyte rather than
+a diagnostic label. On the released data that judgement is comfortable
+\emph{because binning has flattened the variable}. On the underlying
+measurements it is much less so: creatinine alone reaches 0.946, close to the
+quantity that defines the outcome. A study using the continuous release would
+need to defend that inclusion far more carefully---and could not learn this
+from the released file alone.
+
+\subsection{Undocumented constant imputation}
+
+The recovery surfaced a second property of the release. The analysed file
+contains exactly one missing cell; its source contains many. Across the
+recoverable variables, \textbf{339} cells that the source leaves blank carry
+values here, and for \textbf{all 13} variables every such cell was filled with
+a \emph{single constant}---in each case the clinically normal range
+(\texttt{sod} $\rightarrow$ \texttt{133 - 138}, \texttt{rbcc} $\rightarrow$
+\texttt{4.46 - 5.05}, \texttt{al} $\rightarrow$ zero).
+
+The missingness is not random. A patient with CKD is 4.9 to over 30 times more
+likely to have these measurements absent from the source, which is what one
+expects when tests are ordered selectively. Filling every such cell with the
+normal value therefore assigns normal-looking laboratory results to precisely
+the patients most likely to be ill, and does so invisibly: nothing in the
+released file distinguishes a measured normal result from a supplied one.
+
+We state its direction plainly because it runs \emph{against} this paper's
+thesis. Every other mechanism examined here inflates measured performance;
+this one deflates it, since substituting normal values for the sickest
+patients makes the classes harder to separate. The implication is not that the
+benchmark is harder than it looks---it is that a substantial minority of some
+columns are not measurements at all, which no analysis of the released file
+could discover.
+
+\subsection{Would the continuous data have changed any conclusion?}
+
+We modelled the same 187 patients twice under identical design, seeds and
+pipelines, differing only in the representation of the recoverable variables.
+The largest difference in either direction is \textbf{0.0122} ROC-AUC---an
+order of magnitude inside the intervals of Section~\ref{sec:honest}. Nothing
+changes.
+
+That null is more informative than a difference would have been. Serum
+creatinine gains 0.266 ROC-AUC on its own when its true values are restored,
+and the multivariable models do not benefit at all, because the ceiling means
+that information is already present several times over via haemoglobin and
+packed cell volume. \emph{One can destroy the resolution of the most
+diagnostic laboratory analyte in the dataset and the models will not notice.}
+What this rules out is the specific worry that the published binning explains
+the benchmark's ceiling. It does not; the case mix does.
+
+\subsection{Honest uncertainty}
+\label{sec:honest}
+
+Conventional intervals resample patients over pooled out-of-fold predictions
+while holding the \emph{fitted models} fixed, and therefore cannot see the
+variability introduced by model selection, tuning and calibration being
+re-made on a different sample. We removed that shortcut: for each resample the
+entire nested procedure is re-run from scratch, 200 times per cell.
+
+Within each resample the outer folds are formed over \emph{patients} rather
+than rows, so every copy of a duplicated patient stays on the same side of
+every split. Without that constraint a model would be evaluated on patients it
+had trained on---the failure this paper is about, and not excusable in its own
+methods.
+
+% Source: reports/tables/table_38_procedure_bootstrap.csv
+\begin{table}[t]
+\caption{Prediction-level versus whole-procedure 95\% intervals for ROC-AUC.
+200 resamples per cell, no failures.}
+\label{tab:boot}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llccc}
+\toprule
+\tabhead{Config.} & \tabhead{Model} & \tabhead{Pred.-level} &
+\tabhead{Proc.-level} & \tabhead{Ratio} \\
+\midrule
+Laboratory & SVM & 0.988--0.999 & 0.970--0.999 & 2.7$\times$ \\
+Low-cost   & RF  & 0.981--0.999 & 0.968--0.999 & 1.7$\times$ \\
+Low-cost   & SVM & 0.979--0.999 & 0.960--0.998 & 1.8$\times$ \\
+Full valid & SVM & degenerate   & 0.999--1.000 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The honest intervals are 1.7--2.7$\times$ wider (Table~\ref{tab:boot}). These
+are the intervals a reader should use when asking whether two configurations
+differ; on this evidence, the study's inability to distinguish the low-cost
+and laboratory sets is if anything \emph{understated} by the narrower
+intervals conventionally reported.
+
+\subsection{Robustness}
+
+Table~\ref{tab:robust} summarises analyses that test whether the conclusions
+depend on specific choices. None does.
+
+\begin{table}[t]
+\caption{Robustness analyses}
+\label{tab:robust}
+\centering
+\small
+\begin{tabular}{p{4.4cm}p{3.1cm}}
+\toprule
+\tabhead{Question} & \tabhead{Answer} \\
+\midrule
+Do the 4 internally contradictory labels drive results? &
+Deleting: no ($|\Delta| \leq 0.0025$). \textbf{Flipping}: costs low-cost up to
+\textbf{0.0241} vs 0.0022 for laboratory. \\
+Is the midpoint encoding load-bearing? &
+No. Four encodings incl.\ one-hot (86 columns); largest deviation
+\textbf{0.0101}. \\
+How much is internal validation already correcting for? &
+Largest apparent-minus-nested optimism \textbf{+0.0072}. \\
+Does isotonic really beat Platt at $n=200$? &
+Yes. \textbf{105/120} paired wins (88\%) at 100 outer test sets. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The label-robustness asymmetry deserves note because it stresses the paper's
+own supporting claim: the four disputed patients are precisely those whose
+history, examination and dipstick findings look unremarkable while their
+laboratory values indicate advanced disease. If their \texttt{notckd} labels
+are the errors, they are exactly the patients a low-cost instrument would
+miss---and a laboratory panel would not.
+
+The calibration result is worth one further line, since it contradicts the
+usual small-sample expectation. Across 100 outer test sets, isotonic
+calibration achieved median Brier 0.0288 against 0.0337 for Platt scaling and
+0.0345 uncalibrated, with median calibration slope 1.148 against 2.378 and
+1.887 respectively.
+
+\subsection{Supporting result: cost-stratified feature sets}
+
+Under leakage-controlled validation, 11 variables obtainable from history,
+examination and a urine dipstick reach ROC-AUC 0.992 (95\% CI 0.981--0.999)
+against 0.995 for the 14-variable laboratory panel---a difference well inside
+either interval, and unresolved at this sample size.
+
+At identical cost, the additive EBM gives up only 0.0066 ROC-AUC to the RBF
+SVM (0.987 vs 0.993) while achieving a calibration slope of \textbf{1.009}
+against \textbf{1.257}, and yields per-variable shape functions a clinician
+can read and challenge (Fig.~\ref{fig:ebm}). On this sample the readable model
+is also the better-calibrated one, so the usual
+accuracy-versus-interpretability trade-off does not bind. One caveat is
+recorded rather than smoothed over: \texttt{bp (Diastolic)} runs opposite to
+its own marginal association---a suppression effect beside \texttt{bp limit}
+and \texttt{htn}---and must not be read in isolation.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_r13_ebm_shapes.pdf}
+\caption{Fitted shape functions of the low-cost additive model, averaged over
+25 outer folds (shaded band: $\pm 1$ SD). Directions are clinically coherent:
+low urine specific gravity raises risk, albuminuria raises it steeply, and
+diabetes, hypertension and poor appetite all push the same way.}
+\label{fig:ebm}
+\end{figure*}
+
+\textbf{This is a statement about cost tiers on this case mix. It is not a
+screening result}, because a sample in which 84\% of cases carry
+moderate-to-severe disease is not a screening population.
+
+%==============================================================================
+\section{Discussion}
+
+This study set out to measure one failure mode and found three. Each pushes
+measured performance toward 1.0, none is predictive ability, and they compound:
+controlling any one leaves the others free to produce a near-perfect number.
+
+They are also ordered by how easy each is to miss. Leakage is visible in the
+column list. Case mix requires examining who is in the sample. Cohort overlap
+requires comparing two datasets nobody had reason to suspect were one---and is
+invisible from inside either file, since both look like well-formed,
+separately documented datasets. That ordering is the paper's general point: a
+benchmark's trustworthiness is not a property one can establish by analysing
+it.
+
+Three practices follow, each cheap and each of which changed a conclusion
+here. \emph{Declare prohibited columns and enforce them with something that
+raises rather than drops.} \emph{Inspect the stage distribution and univariate
+separability before believing a discrimination figure}---if a single predictor
+reaches 0.97 alone, the modelling is not what is producing the result.
+\emph{Verify that a validation cohort is a different set of patients}, by
+record-level comparison rather than by documentation.
+
+The wider implication concerns how benchmark results are read. Two of the
+three mechanisms here are properties of the data that no amount of careful
+modelling can correct, and the third invalidates the evidence normally taken
+as decisive. A reported accuracy of 99\% on this benchmark is compatible with
+a model that has learned nothing transferable, and distinguishing the cases
+requires exactly the leakage audit, subgroup analysis and provenance check
+reported here.
+
+%==============================================================================
+\section{Limitations}
+
+Every estimate is internal to 200 patients, and the study has \textbf{no
+external validation}. The natural remedy---the larger 2015 release---is
+disqualified by our own finding, and the gate enforces that rather than merely
+stating it. Genuine external validation requires a cohort we do not have; the
+most suitable candidate identified is a community-based series with 68\% of
+cases at stages 1--2, access to which is restricted.
+
+The sampling is hospital-based and single-centre; the 64\% prevalence is a
+property of recruitment, and PPV and NPV reported at that prevalence do not
+transfer. The case mix is the most consequential limitation and is why no
+figure here estimates screening performance. Four records are internally
+contradictory, and while deleting them changes nothing, trusting their staging
+instead costs the low-cost configuration up to 0.0241 ROC-AUC---so this
+limitation is half-answered, not answered. The data are cross-sectional, so
+chronicity, which the definition of CKD requires, cannot be established. Age is
+banded and no sex, ethnicity or socioeconomic variable exists, so
+\textbf{subgroup and fairness analysis is impossible}---a reason for caution
+rather than an excuse for silence.
+
+The literature survey is targeted rather than systematic, and 10 of its 13
+rows await hand verification behind paywalls. Reproducibility has an honest
+limit: identical seeds reproduce identical predictions within an environment,
+but across an environment rebuild agreement is to approximately $10^{-16}$
+rather than bit-for-bit, because floating-point summation order depends on the
+installed BLAS.
+
+We make no claim about clinical utility, causality, deployment readiness or
+generalisability, and none about \emph{how} the provenance discrepancy arose.
+
+%==============================================================================
+\section{Conclusion}
+
+Machine-learning results on this benchmark cluster at the discrimination
+ceiling. We identify three mechanisms that put them there. Target leakage
+takes any configuration to ROC-AUC 1.000. Case mix---84\% of cases at stage
+3--5, with haemoglobin alone at 0.968---puts valid models at the ceiling
+unaided, and is the larger effect. And the two releases the literature treats
+as independent cohorts share their patients record-for-record, so published
+cross-dataset validations between them measure resubstitution.
+
+What the work supports is a methodological claim in two parts. About this
+benchmark: its reported numbers are largely explained by properties of the
+data, the largest of which is rarely examined and the least visible of which
+invalidates the cross-dataset validations that would otherwise be its
+strongest evidence. About method: all three were found by checks that can be
+run \emph{before} any model is fitted.
+
+Prospective validation in a genuine screening series would be required before
+any clinical interpretation is warranted, and no dataset examined here can
+substitute for it.
+
+%==============================================================================
+\section*{Reproducibility}
+
+The complete pipeline, including the provenance gate as reusable
+dataset-agnostic machinery, is available in the accompanying repository. One
+master seed derives every fold and model seed; the raw file is checksummed on
+every load and never modified; all 108{,}000 out-of-fold predictions are
+written to a single table from which every reported number is derived; and 380
+automated tests enforce the leakage, determinism and report-consistency
+guarantees. Environment and BLAS build are recorded in a lock file. Reporting
+follows the spirit of TRIPOD+AI~\cite{tripod2024}; a completed checklist
+accompanies the repository.
+
+%==============================================================================
+\begin{thebibliography}{99}
+
+\bibitem{gbd2020}
+GBD Chronic Kidney Disease Collaborators,
+``Global, regional, and national burden of chronic kidney disease, 1990--2017:
+a systematic analysis for the Global Burden of Disease Study 2017,''
+\emph{The Lancet}, vol.~395, no.~10225, pp.~709--733, 2020.
+doi:10.1016/S0140-6736(20)30045-3
+
+\bibitem{kdigo2024}
+Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group,
+``KDIGO 2024 clinical practice guideline for the evaluation and management of
+chronic kidney disease,''
+\emph{Kidney International}, vol.~105, no.~4S, pp.~S117--S314, 2024.
+doi:10.1016/j.kint.2023.10.018
+
+\bibitem{tripod2024}
+G.~S. Collins, K.~G.~M. Moons, P.~Dhiman, \emph{et al.},
+``TRIPOD+AI statement: updated guidance for reporting clinical prediction
+models that use regression or machine learning methods,''
+\emph{BMJ}, vol.~385, e078378, 2024.
+doi:10.1136/bmj-2023-078378
+
+\bibitem{uci2015}
+L.~Rubini, P.~Soundarapandian, and P.~Eswaran,
+``Chronic Kidney Disease,'' UCI Machine Learning Repository, 2015.
+doi:10.24432/C5G020
+
+\bibitem{uci2023}
+M.~A. Islam and S.~Akter,
+``Risk Factor Prediction of Chronic Kidney Disease,''
+UCI Machine Learning Repository, 2020.
+doi:10.24432/C5WP64
+
+\bibitem{riley2019}
+R.~D. Riley, K.~I.~E. Snell, J.~Ensor, \emph{et al.},
+``Minimum sample size for developing a multivariable prediction model:
+Part II --- binary and time-to-event outcomes,''
+\emph{Statistics in Medicine}, vol.~38, no.~7, pp.~1276--1296, 2019.
+doi:10.1002/sim.7992
+
+\bibitem{varma2006}
+S.~Varma and R.~Simon,
+``Bias in error estimation when using cross-validation for model selection,''
+\emph{BMC Bioinformatics}, vol.~7, art.~91, 2006.
+doi:10.1186/1471-2105-7-91
+
+\bibitem{vancalster2016}
+B.~Van Calster, D.~Nieboer, Y.~Vergouwe, B.~De Cock, M.~J. Pencina, and
+E.~W. Steyerberg,
+``A calibration hierarchy for risk models was defined: from utopia to
+empirical data,''
+\emph{Journal of Clinical Epidemiology}, vol.~74, pp.~167--176, 2016.
+doi:10.1016/j.jclinepi.2015.12.005
+
+\bibitem{nori2019}
+H.~Nori, S.~Jenkins, P.~Koch, and R.~Caruana,
+``InterpretML: a unified framework for machine learning interpretability,''
+arXiv:1909.09223, 2019.
+
+\bibitem{kabir2026}
+M.~A. Kabir, S.~Munira, D.~T. Azad, S.~M. Ikram, M.~H.~R. Sarker, and
+S.~M.~A. Hanifi,
+``Community-based early-stage chronic kidney disease screening using
+explainable machine learning for low-resource settings,''
+\emph{International Journal of Medical Informatics}, 2026.
+arXiv:2601.01119
+
+\bibitem{islam2023}
+M.~A. Islam, M.~Z.~H. Majumder, and M.~A. Hussein,
+``Chronic kidney disease prediction based on machine learning algorithms,''
+\emph{Journal of Pathology Informatics}, vol.~14, art.~100189, 2023.
+doi:10.1016/j.jpi.2023.100189
+
+\bibitem{hossain2025}
+M.~F. Hossain, S.~T. Diya, and R.~Khan,
+``ACD-ML: Advanced CKD detection using machine learning: a tri-phase ensemble
+and multi-layered stacking and blending approach,''
+\emph{Computer Methods and Programs in Biomedicine Update}, vol.~7,
+art.~100173, 2025.
+doi:10.1016/j.cmpbup.2024.100173
+
+\end{thebibliography}
+
+\end{document}

@@ -7,3 +7,10 @@ venv/
 *.egg-info/
 .DS_Store
 dist/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/b1.log
+paper/b2.log
+paper/build1.log
+paper/build2.log
