@@ -462,6 +462,8 @@ Fitting the identical selection procedure (inner grid search on ROC-AUC) on the 
 
 The largest ROC-AUC optimism across these cells is +0.0072. That optimism is this small for the same reason the valid models sit near the ceiling (section 5.5): the case mix leaves little room for resubstitution to exaggerate. On a harder problem the same procedure would show a much larger gap, so the small values here should be read as further evidence about the sample, not as evidence that validation discipline was unnecessary.
 
+One asymmetry is worth recording: resubstitution is guaranteed to flatter *rank order* (the AUC optimism above is non-negative in every cell), but not the *probability scale*. In 1 cell(s) the apparent Brier score is actually worse than the nested one (Laboratory x SVM (RBF) (0.0399 vs 0.0276)), because the averaged out-of-fold probabilities are better placed on the probability scale than a single resubstitution fit's. Discrimination and calibration do not inflate together, which is one more reason the two must be reported separately.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found two. Both push measured performance towards 1.0, and neither is clinical usefulness.

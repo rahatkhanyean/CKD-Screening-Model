@@ -44,9 +44,14 @@ class TestOptimismInvariants:
             optimism[optimism["optimism_roc_auc"] < -1e-9]
         )
 
-    def test_apparent_brier_never_worse_than_nested(self, optimism):
-        # Resubstitution can only flatter the Brier score too.
-        assert (optimism["apparent_brier"] <= optimism["nested_brier"] + 1e-9).all()
+    def test_brier_columns_present_and_finite(self, optimism):
+        """No sign invariant for Brier: resubstitution flatters rank order
+        (AUC) but not necessarily the probability scale — the reference run
+        shows laboratory x SVM with apparent Brier WORSE than nested
+        (Platt-style SVC probabilities under resubstitution). The report
+        text discusses this; the table only has to carry the numbers."""
+        assert optimism["apparent_brier"].notna().all()
+        assert optimism["nested_brier"].notna().all()
 
     def test_nested_numbers_match_published_aggregation(self, optimism):
         preds = pd.read_csv(

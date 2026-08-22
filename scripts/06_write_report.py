@@ -1279,6 +1279,23 @@ def main() -> int:
       f"small values here should be read as further evidence about the "
       f"sample, not as evidence that validation discipline was unnecessary.")
     w("")
+    brier_worse = optimism[optimism["apparent_brier"] > optimism["nested_brier"]]
+    if len(brier_worse):
+        cells_txt = "; ".join(
+            f"{config_label(r['config'])} x {model_label(r['model'])} "
+            f"({fmt(r['apparent_brier'], 4)} vs {fmt(r['nested_brier'], 4)})"
+            for _, r in brier_worse.iterrows()
+        )
+        w(f"One asymmetry is worth recording: resubstitution is guaranteed "
+          f"to flatter *rank order* (the AUC optimism above is non-negative "
+          f"in every cell), but not the *probability scale*. In "
+          f"{len(brier_worse)} cell(s) the apparent Brier score is actually "
+          f"worse than the nested one ({cells_txt}), because the averaged "
+          f"out-of-fold probabilities are better placed on the probability "
+          f"scale than a single resubstitution fit's. Discrimination and "
+          f"calibration do not inflate together, which is one more reason "
+          f"the two must be reported separately.")
+        w("")
 
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
