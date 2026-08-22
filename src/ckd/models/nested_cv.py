@@ -101,6 +101,7 @@ def _run_one_repeat(
     calibration: str,
     repeat: int,
     settings: NestedCVSettings,
+    feature_override: list[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Execute one full outer cross-validation pass. Returns (predictions, fold_info)."""
     spec = get_model(model_name)
@@ -109,7 +110,12 @@ def _run_one_repeat(
     # This is the first of two independent defences: the caller narrows the
     # data, and the LeakageGuard inside the pipeline then verifies that nothing
     # prohibited survived. Passing the full frame would (correctly) raise.
-    X = X.loc[:, list(get_config(config_name).features)]
+    # ``feature_override`` carries encoded column names (see
+    # ckd.data.encodings); assert_pipeline_is_clean checks each one traces
+    # back to a declared feature, so the narrowing stays authorised.
+    columns = (list(feature_override) if feature_override is not None
+               else list(get_config(config_name).features))
+    X = X.loc[:, columns]
 
     outer = StratifiedKFold(
         n_splits=settings.outer_folds,
@@ -125,7 +131,8 @@ def _run_one_repeat(
         y_tr, y_te = y[train_idx], y[test_idx]
 
         seed = _fold_seed(settings.seed, repeat, fold, salt=2)
-        pipe = build_pipeline(model_name, config_name, seed)
+        pipe = build_pipeline(model_name, config_name, seed,
+                              feature_override=feature_override)
         assert_pipeline_is_clean(pipe, config_name)
 
         t0 = time.perf_counter()
@@ -218,6 +225,7 @@ def run_nested_cv(
     calibration_methods: Iterable[str],
     settings: NestedCVSettings,
     verbose: int = 1,
+    feature_override: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run the full grid of (configuration x model x calibration x repeat).
 
@@ -246,7 +254,7 @@ def run_nested_cv(
         )
 
     results = Parallel(n_jobs=settings.n_jobs, verbose=5 if verbose else 0)(
-        delayed(_run_one_repeat)(X, y_arr, m, c, cal, r, settings)
+        delayed(_run_one_repeat)(X, y_arr, m, c, cal, r, settings, feature_override)
         for (m, c, cal, r) in tasks
     )
 

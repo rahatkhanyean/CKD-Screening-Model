@@ -1,0 +1,68 @@
+cff-version: 1.2.0
+title: >-
+  Three mechanisms inflate reported performance on a widely used public
+  CKD benchmark: a leakage-controlled, case-mix-aware re-analysis
+message: >-
+  If you use this analysis, its code, or its provenance findings, please
+  cite it. If you use the underlying dataset, cite the UCI releases listed
+  under references below - and note this work's finding that the two
+  releases share their patients record-for-record.
+type: software
+authors:
+  - name: "Repository author"
+    note: >-
+      Replace with author name, affiliation and ORCID before archiving or
+      submission. Left unfilled deliberately rather than guessed.
+abstract: >-
+  A re-analysis of the UCI "Risk Factor Prediction of Chronic Kidney
+  Disease" dataset asking why machine-learning results on it cluster at
+  the discrimination ceiling. Three mechanisms are identified and
+  quantified: target leakage from outcome-derived columns; a case mix in
+  which 84% of cases carry stage 3-5 disease, so haemoglobin alone reaches
+  ROC-AUC 0.968; and non-independent validation cohorts - a record-level
+  provenance check finds all 200 patients present in the 2015 UCI CKD
+  release, so published cross-dataset validations between the two evaluate
+  models on their own training population. Additional findings: the
+  published interval encoding destroys 0.27 ROC-AUC of univariate signal
+  in serum creatinine without changing any multivariable conclusion, and
+  the release supplied constant "normal" values for missing laboratory
+  measurements whose absence is strongly outcome-associated.
+keywords:
+  - chronic kidney disease
+  - data leakage
+  - spectrum bias
+  - case mix
+  - external validation
+  - benchmark quality
+  - clinical prediction models
+  - reproducibility
+license: MIT
+repository-code: "https://example.invalid/replace-before-archiving"
+references:
+  - type: data
+    title: Risk Factor Prediction of Chronic Kidney Disease
+    authors:
+      - family-names: Islam
+        given-names: Md. Ashiqul
+      - family-names: Akter
+        given-names: Shamima
+    year: 2020
+    doi: 10.24432/C5WP64
+    notes: >-
+      The dataset analysed here. Its documentation states collection at
+      Enam Medical College, Savar, Bangladesh; section 5.14 of the report
+      shows this is contradicted at record level by the 2015 release.
+  - type: data
+    title: Chronic Kidney Disease
+    authors:
+      - family-names: Rubini
+        given-names: L.
+      - family-names: Soundarapandian
+        given-names: P.
+      - family-names: Eswaran
+        given-names: P.
+    year: 2015
+    doi: 10.24432/C5G020
+    notes: >-
+      The continuous-valued release that contains the same patients, used
+      here to recover measurements and to establish the cohort overlap.

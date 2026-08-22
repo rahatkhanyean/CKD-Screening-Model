@@ -1,0 +1,124 @@
+name: CI
+
+# The leakage, determinism and report-consistency guarantees in this
+# repository are only guarantees while the tests actually run. This workflow
+# runs them on every push and pull request, plus the cheap pipeline stages,
+# so a change that breaks a guarantee fails visibly rather than silently.
+#
+# Stage 3 (repeated nested cross-validation, ~72 min) is NOT run here. Its
+# committed predictions are the input to stages 4, 8, 9, 11 and 12; the
+# regression test in tests/test_encodings.py checks a slice of them against a
+# fresh fit, which is what would catch an accidental change to the CV engine.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Verify the raw data is unmodified
+        run: |
+          python - <<'PY'
+          import hashlib, sys
+          expected = "f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a"
+          actual = hashlib.sha256(
+              open("data/raw/ckd-dataset-v2.csv", "rb").read()
+          ).hexdigest()
+          print("sha256:", actual)
+          if actual != expected:
+              sys.exit("raw data checksum mismatch - the input file must never change")
+          PY
+
+      - name: Run the test suite
+        run: python -m pytest tests/ -q
+
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # Cheap stages only. Each reads committed artefacts and regenerates its
+      # own outputs, so a drift between code and committed tables shows up as
+      # a diff below.
+      - name: Stage 0 - provenance gate
+        run: python scripts/00_provenance.py
+
+      - name: Stage 1 - data preparation
+        run: python scripts/01_prepare_data.py
+
+      - name: Stage 2 - exploratory analysis
+        run: python scripts/02_eda.py
+
+      - name: Stage 4 - evaluation
+        run: python scripts/04_evaluate.py
+
+      - name: Stage 7 - literature tables
+        run: python scripts/07_literature.py
+
+      - name: Stage 8 - label robustness
+        run: python scripts/08_sensitivity_labels.py
+
+      - name: Stage 11 - continuous recovery
+        run: python scripts/11_continuous_recovery.py
+
+      - name: Stage 13 - TRIPOD checklist
+        run: python scripts/13_tripod_checklist.py
+
+      - name: Stage 6 - regenerate the report
+        run: python scripts/06_write_report.py
+
+      - name: Fail if regenerated outputs differ from what is committed
+        run: |
+          if ! git diff --quiet -- reports/ data/processed/; then
+            echo "Regenerated artefacts differ from the committed ones:"
+            git diff --stat -- reports/ data/processed/
+            echo
+            echo "Either the code changed without regenerating, or a stage is"
+            echo "not deterministic. Both need fixing before merge."
+            exit 1
+          fi
+          echo "Regenerated artefacts match the committed ones."
+
+      - name: Upload regenerated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-report
+          path: reports/research_report.md

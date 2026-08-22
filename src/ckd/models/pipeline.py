@@ -29,8 +29,23 @@ from ..features.encoders import ColumnSelector, LeakageGuard
 from .zoo import ModelSpec, get_model
 
 
-def build_pipeline(model_name: str, config_name: str, seed: int) -> Pipeline:
-    """Build the full pipeline for one (model, feature configuration) pair."""
+def build_pipeline(
+    model_name: str,
+    config_name: str,
+    seed: int,
+    feature_override: list[str] | None = None,
+) -> Pipeline:
+    """Build the full pipeline for one (model, feature configuration) pair.
+
+    ``feature_override`` replaces the columns the selector passes on, for
+    encodings that rename columns (one-hot expands ``sg`` into
+    ``sg__<label>``; see :mod:`ckd.data.encodings`). It changes *only* the
+    selector: both leakage guards still run first and still test against
+    the same prohibited names, so an override cannot be used to smuggle a
+    prohibited column past them. Callers must derive the override from a
+    configuration's own features - ``assert_pipeline_is_clean`` verifies
+    that every overridden name maps back to a declared feature.
+    """
     cfg = get_config(config_name)
     spec: ModelSpec = get_model(model_name)
 
@@ -53,7 +68,10 @@ def build_pipeline(model_name: str, config_name: str, seed: int) -> Pipeline:
     steps: list[tuple[str, Any]] = [
         ("outcome_guard", outcome_guard),
         ("leakage_guard", guard),
-        ("select", ColumnSelector(list(cfg.features))),
+        ("select", ColumnSelector(
+            list(feature_override) if feature_override is not None
+            else list(cfg.features)
+        )),
         # Median imputation: the only missing cell in this dataset is the
         # invalid ' p ' entry in grf, but the step is kept unconditionally so
         # that the pipeline behaves correctly on any resample or future data.
@@ -79,6 +97,23 @@ def assert_pipeline_is_clean(pipe: Pipeline, config_name: str) -> None:
     """
     cfg = get_config(config_name)
     features = set(pipeline_feature_names(pipe))
+
+    # An encoding may rename a column (one-hot expands 'sg' into
+    # 'sg__<label>'). Every selected name must still trace back to a column
+    # the configuration declares, so a renaming scheme cannot introduce a
+    # column that was never authorised. The base name is taken as the part
+    # before the encoding separator.
+    declared = set(cfg.features)
+    base_names = {name.split("__", 1)[0] for name in features}
+    undeclared_bases = base_names - declared
+    if undeclared_bases:
+        raise AssertionError(
+            f"Pipeline for {config_name!r} selects column(s) whose base name "
+            f"is not declared by the configuration: {sorted(undeclared_bases)}."
+        )
+    # Prohibition checks below run against base names too, so that a
+    # prohibited column cannot be hidden behind an encoding suffix.
+    features = features | base_names
 
     # The raw outcome column is prohibited unconditionally, in every
     # configuration including the deliberately invalid one.

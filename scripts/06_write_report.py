@@ -2065,7 +2065,20 @@ def main() -> int:
     w("- **This document is generated.** Every quantity above is injected from "
       "`reports/tables/` by `scripts/06_write_report.py`; nothing is "
       "transcribed by hand.")
-    w("- **Environment.** Dependencies are pinned in `requirements.txt`.")
+    w("- **Environment.** Direct dependencies are pinned in "
+      "`requirements.txt`; the complete environment that produced these "
+      "artefacts is recorded in `requirements.lock.txt`, together with the "
+      "interpreter and BLAS build.")
+    w("- **The limit of that determinism, stated precisely.** Identical "
+      "seeds reproduce identical predictions *within* an environment, and a "
+      "test asserts it. Across a rebuild of the environment from the same "
+      "pinned versions, agreement is to approximately 1e-16 rather than "
+      "bit-for-bit, because floating-point summation order depends on the "
+      "installed BLAS. This was checked against the unmodified reference "
+      "code and is a property of the environment, not of the analysis; it "
+      "is four orders of magnitude below the smallest quantity reported "
+      "here, and the regression test asserts agreement to 1e-12 rather "
+      "than claiming exactness it cannot deliver.")
     w("")
     w("Exact commands:")
     w("")
