@@ -20,7 +20,7 @@
 
 **Methods.** 200 patient records (128 CKD, 72 non-CKD) collected at Enam Medical College, Savar, Bangladesh. All continuous variables were already discretised into interval bins in the released file. Six feature configurations were compared, including one **deliberately invalid** set containing an exact copy of the outcome (`affected`), the post-diagnosis stage label (`stage`) and the diagnostic eGFR quantity (`grf`). 6 model families (dummy, penalised logistic regression, random forest, support vector machine, XGBoost, explainable boosting machine) were evaluated under 5-fold outer / 4-fold inner nested stratified cross-validation repeated 5 times (25 outer test sets). Imputation, scaling, tuning, calibration and threshold selection were performed strictly within training folds, and prohibited columns were blocked programmatically by a guard that raises at fit and transform time. Uncalibrated, Platt and isotonic probabilities were compared. Confidence intervals come from a stratified patient-level bootstrap (2000 resamples).
 
-**Results.** The invalid leaky configuration reached ROC-AUC 1.000 (1.000-1.000). The best valid configuration reached 1.000 (1.000-1.000), i.e. the valid model is itself at the discrimination ceiling, so the gain from leakage measured against it is arithmetically near zero. Measured against baselines that still have headroom, leakage closes 100% of the remaining error for the low-cost set and 100% for the clinical-only set: it takes any configuration to 1.0. The low-cost configuration (history, examination and urine dipstick; 11 variables) achieved ROC-AUC 0.992 (0.981-0.999) versus 0.995 (0.988-0.999) for the laboratory-only configuration (14 variables). At the prespecified threshold of 0.50 the low-cost model reached sensitivity 0.961 (0.922-0.992) and negative predictive value 0.935 (0.878-0.986). Calibration of the best valid model was slope n/a, intercept 0.31. Feature-importance rankings were weakly concordant across the 25 outer folds (Kendall's W = 0.471).
+**Results.** The invalid leaky configuration reached ROC-AUC 1.000 (1.000-1.000). The best valid configuration reached 1.000 (1.000-1.000), i.e. the valid model is itself at the discrimination ceiling, so the gain from leakage measured against it is arithmetically near zero. Measured against baselines that still have headroom, leakage closes 100% of the remaining error for the low-cost set and 100% for the clinical-only set: it takes any configuration to 1.0. The low-cost configuration (history, examination and urine dipstick; 11 variables) achieved ROC-AUC 0.992 (0.981-0.999) versus 0.995 (0.988-0.999) for the laboratory-only configuration (14 variables). At the prespecified threshold of 0.50 the low-cost model reached sensitivity 0.961 (0.922-0.992) and negative predictive value 0.935 (0.878-0.986) (all figures in this paragraph: best model per configuration, uncalibrated pooled out-of-fold predictions; the prespecified selection rule, which also considers calibrated cells, is reported in the results). The calibration slope of the best valid model is **not identified**: it separates the classes completely, so the logistic recalibration has no maximum-likelihood solution (intercept 0.31, Brier 0.0036); the identified slope of the best low-cost model is 1.26. Feature-importance rankings were weakly concordant across the 25 outer folds (Kendall's W = 0.471).
 
 **A second, larger source of optimism was identified.** Even without any prohibited column, valid configurations sit close to the discrimination ceiling, and a post hoc case-mix analysis explains why: 107 of the 128 CKD patients (84%) are staged s3-s5, and haemoglobin alone separates the groups with univariate ROC-AUC 0.968. This is a contrast between advanced disease and comparatively healthy controls, not a screening series. Restricted to early CKD (s1-s2, n = 21) versus non-CKD, sensitivity at the prespecified threshold falls from 0.969 to 0.905 for the low-cost model and from 0.891 to 0.762 for the clinical-only model.
 
@@ -252,13 +252,15 @@ The honest summary is that leakage takes any configuration to the ceiling. Where
 
 ### 5.3 Low-cost versus laboratory (primary question, secondary question 2)
 
-| Configuration | k | ROC-AUC (95% CI) | Sensitivity | Specificity | NPV | PPV | Brier |
-|---|---:|---|---|---|---|---|---|
-| Full valid | 25 | 1.000 (1.000-1.000) | 0.98 (0.95-1.00) | 1.00 (1.00-1.00) | 0.96 (0.91-1.00) | 1.00 (1.00-1.00) | 0.007 |
-| Laboratory | 14 | 0.995 (0.988-0.999) | 0.97 (0.94-0.99) | 0.97 (0.93-1.00) | 0.95 (0.89-0.99) | 0.98 (0.96-1.00) | 0.028 |
-| Low-cost + urine microscopy | 15 | 0.992 (0.980-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.033 |
-| Low-cost | 11 | 0.992 (0.981-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.030 |
-| Clinical only | 8 | 0.953 (0.919-0.979) | 0.91 (0.86-0.96) | 0.99 (0.96-1.00) | 0.87 (0.80-0.93) | 0.99 (0.97-1.00) | 0.058 |
+Best model per configuration, **uncalibrated**, pooled out-of-fold predictions (the same cells as the leakage audit above). The prespecified selection rule in section 5.9 instead selects over all (model x calibration) cells, so its chosen model and its numbers can differ slightly from this table's; every quoted figure names its cell for that reason:
+
+| Configuration | k | Best model | ROC-AUC (95% CI) | Sensitivity | Specificity | NPV | PPV | Brier |
+|---|---:|---|---|---|---|---|---|---|
+| Full valid | 25 | SVM (RBF) | 1.000 (1.000-1.000) | 0.98 (0.95-1.00) | 1.00 (1.00-1.00) | 0.96 (0.91-1.00) | 1.00 (1.00-1.00) | 0.007 |
+| Laboratory | 14 | SVM (RBF) | 0.995 (0.988-0.999) | 0.97 (0.94-0.99) | 0.97 (0.93-1.00) | 0.95 (0.89-0.99) | 0.98 (0.96-1.00) | 0.028 |
+| Low-cost + urine microscopy | 15 | Random forest | 0.992 (0.980-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.033 |
+| Low-cost | 11 | Random forest | 0.992 (0.981-0.999) | 0.96 (0.92-0.99) | 1.00 (1.00-1.00) | 0.94 (0.88-0.99) | 1.00 (1.00-1.00) | 0.030 |
+| Clinical only | 8 | EBM (GAM) | 0.953 (0.919-0.979) | 0.91 (0.86-0.96) | 0.99 (0.96-1.00) | 0.87 (0.80-0.93) | 0.99 (0.97-1.00) | 0.058 |
 
 The low-cost set (11 variables, no venepuncture) reaches ROC-AUC 0.992 against 0.995 for the laboratory set (14 variables) - a gap of 0.003. The bootstrap confidence intervals overlap substantially, so this comparison is not statistically resolved at n=200; the study cannot distinguish the two configurations reliably.
 
@@ -515,11 +517,11 @@ python scripts/run_all.py
 
 ## 10. Conclusion
 
-Under repeated nested cross-validation with programmatically enforced leakage control, a small model built only from history, physical examination and a urine reagent strip achieved ROC-AUC 0.992 (95% CI 0.981-0.999) for CKD status in this 200-patient single-centre sample, against 0.995 for a laboratory-based configuration. Including the dataset's three prohibited columns raised ROC-AUC to 1.000, quantifying the inflation that leakage produces and offering a concrete explanation for the near-perfect results frequently reported on this data.
+Under repeated nested cross-validation with programmatically enforced leakage control, a small model built only from history, physical examination and a urine reagent strip achieved ROC-AUC 0.992 (95% CI 0.981-0.999) for CKD status in this 200-patient single-centre sample, against 0.995 for the laboratory-only configuration (best model per configuration, uncalibrated, as in section 5.3). Including the dataset's three prohibited columns raised ROC-AUC to 1.000, quantifying the inflation that leakage produces and offering a concrete explanation for the near-perfect results frequently reported on this data.
 
-The prespecified selection rule, which ranks on discrimination alone, picks **SVM (RBF) on the Full valid configuration with Isotonic probabilities** (ROC-AUC 1.000, sensitivity 1.00, NPV 1.00, Brier 0.0036). We report that pick because the rule was fixed in advance, but we do not endorse it: as section 5.10 sets out, that model separates the classes completely, so its calibration slope is not identified, its feature importances are unstable (Kendall's W = 0.471), and it needs a full laboratory panel.
+The prespecified selection rule, which ranks on discrimination alone, picks **SVM (RBF) on the Full valid configuration with Isotonic probabilities** (ROC-AUC 1.000, sensitivity 1.00, NPV 1.00, Brier 0.0036). We report that pick because the rule was fixed in advance, but we do not endorse it: as section 5.10 sets out, that model separates the classes completely, so its calibration slope is not identified, its feature importances are unstable (Kendall's W = 0.471), and it needs every valid variable in the dataset, the full laboratory panel included.
 
-**The best-supported model for the question this study asks is the low-cost one: SVM (RBF) with Isotonic probabilities on 11 history, examination and urine-dipstick variables** - ROC-AUC 0.993 against 1.000 for the full laboratory panel, a difference well inside either confidence interval; sensitivity 0.97, NPV 0.95, Brier 0.0192, and an identified calibration slope of 1.26. It is the only candidate whose probability scale can be checked and whose important variables are reproducible across folds.
+**The best-supported model for the question this study asks is the low-cost one: SVM (RBF) with Isotonic probabilities on 11 history, examination and urine-dipstick variables** - ROC-AUC 0.993 (SVM (RBF), Isotonic) against 1.000 for the selected Full valid model (SVM (RBF), Isotonic), a difference well inside either confidence interval; sensitivity 0.97, NPV 0.95, Brier 0.0192, and an identified calibration slope of 1.26. It is the only candidate whose probability scale can be checked and whose important variables are reproducible across folds.
 
 A post hoc case-mix analysis then showed that even the leakage-controlled figures overstate screening ability: 84% of the CKD patients have stage s3-s5 disease, haemoglobin alone discriminates at ROC-AUC 0.968, and among early-stage CKD patients the low-cost model's sensitivity falls from 0.969 to 0.905 while its ROC-AUC stays above 0.98. Two independent mechanisms - target leakage and case-mix spectrum - push measured performance towards the ceiling on this dataset, and neither reflects clinical usefulness.
 
@@ -592,3 +594,6 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `table_21_spectrum_analysis.csv`
 - `table_22_univariate_separability.csv`
 - `table_23_leakage_ceiling_analysis.csv`
+- `table_24_provenance.csv`
+- `table_24_provenance_agreement.csv`
+- `table_24_provenance_evidence.csv`

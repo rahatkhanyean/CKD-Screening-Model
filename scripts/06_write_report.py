@@ -268,9 +268,24 @@ def main() -> int:
       f"laboratory-only configuration ({int(lab['n_features'])} variables). "
       f"At the prespecified threshold of 0.50 the low-cost model reached "
       f"sensitivity {ci(low, 'sensitivity')} and negative predictive value "
-      f"{ci(low, 'npv')}. Calibration of the best valid model was "
-      f"slope {fmt(best['calibration_slope'], 2)}, intercept "
-      f"{fmt(best['calibration_intercept'], 2)}. Feature-importance rankings "
+      f"{ci(low, 'npv')} (all figures in this paragraph: best model per "
+      f"configuration, uncalibrated pooled out-of-fold predictions; the "
+      f"prespecified selection rule, which also considers calibrated cells, "
+      f"is reported in the results). "
+      + (
+          f"Calibration of the best valid model was "
+          f"slope {fmt(best['calibration_slope'], 2)}, intercept "
+          f"{fmt(best['calibration_intercept'], 2)}. "
+          if np.isfinite(best["calibration_slope"])
+          else
+          f"The calibration slope of the best valid model is **not "
+          f"identified**: it separates the classes completely, so the "
+          f"logistic recalibration has no maximum-likelihood solution "
+          f"(intercept {fmt(best['calibration_intercept'], 2)}, Brier "
+          f"{fmt(best['brier'], 4)}); the identified slope of the best "
+          f"low-cost model is {fmt(best_lc['calibration_slope'], 2)}. "
+      )
+      + f"Feature-importance rankings "
       f"were {'moderately' if kendall >= 0.5 else 'weakly'} concordant across "
       f"the {manifest['outer_folds'] * manifest['repeats']} outer folds "
       f"(Kendall's W = {fmt(kendall)}).")
@@ -762,10 +777,18 @@ def main() -> int:
 
     w("### 5.3 Low-cost versus laboratory (primary question, secondary question 2)")
     w("")
-    w("| Configuration | k | ROC-AUC (95% CI) | Sensitivity | Specificity | NPV | PPV | Brier |")
-    w("|---|---:|---|---|---|---|---|---|")
+    w("Best model per configuration, **uncalibrated**, pooled out-of-fold "
+      "predictions (the same cells as the leakage audit above). The "
+      "prespecified selection rule in section 5.9 instead selects over all "
+      "(model x calibration) cells, so its chosen model and its numbers can "
+      "differ slightly from this table's; every quoted figure names its "
+      "cell for that reason:")
+    w("")
+    w("| Configuration | k | Best model | ROC-AUC (95% CI) | Sensitivity | Specificity | NPV | PPV | Brier |")
+    w("|---|---:|---|---|---|---|---|---|---|")
     for r in (full, lab, lcm, low, clin):
-        w(f"| {config_label(r['config'])} | {int(r['n_features'])} | {ci(r, 'roc_auc')} | "
+        w(f"| {config_label(r['config'])} | {int(r['n_features'])} | "
+          f"{model_label(r['model'])} | {ci(r, 'roc_auc')} | "
           f"{ci(r, 'sensitivity', 2)} | {ci(r, 'specificity', 2)} | "
           f"{ci(r, 'npv', 2)} | {ci(r, 'precision', 2)} | {fmt(r['brier'])} |")
     w("")
@@ -1448,8 +1471,9 @@ def main() -> int:
       f"examination and a urine reagent strip achieved ROC-AUC "
       f"{fmt(low['roc_auc'])} (95% CI {fmt(low['roc_auc_ci_low'])}-"
       f"{fmt(low['roc_auc_ci_high'])}) for CKD status in this 200-patient "
-      f"single-centre sample, against {fmt(lab['roc_auc'])} for a "
-      f"laboratory-based configuration. Including the dataset's three "
+      f"single-centre sample, against {fmt(lab['roc_auc'])} for the "
+      f"laboratory-only configuration (best model per configuration, "
+      f"uncalibrated, as in section 5.3). Including the dataset's three "
       f"prohibited columns raised ROC-AUC to {fmt(leaky['roc_auc'])}, "
       f"quantifying the inflation that leakage produces and offering a concrete "
       f"explanation for the near-perfect results frequently reported on this "
@@ -1465,15 +1489,21 @@ def main() -> int:
       f"fixed in advance, but we do not endorse it: as section 5.10 sets out, "
       f"that model separates the classes completely, so its calibration slope "
       f"is not identified, its feature importances are unstable "
-      f"(Kendall's W = {fmt(kendall)}), and it needs a full laboratory panel.")
+      f"(Kendall's W = {fmt(kendall)}), and it needs every valid variable in "
+      f"the dataset, the full laboratory panel included.")
     w("")
     w(f"**The best-supported model for the question this study asks is the "
       f"low-cost one: {model_label(best_lc['model'])} with "
       f"{calibration_label(best_lc['calibration'])} probabilities on "
       f"{int(low['n_features'])} history, examination and urine-dipstick "
-      f"variables** - ROC-AUC {fmt(best_lc['roc_auc'])} against "
-      f"{fmt(best['roc_auc'])} for the full laboratory panel, a difference "
-      f"well inside either confidence interval; sensitivity "
+      f"variables** - ROC-AUC {fmt(best_lc['roc_auc'])} "
+      f"({model_label(best_lc['model'])}, "
+      f"{calibration_label(best_lc['calibration'])}) against "
+      f"{fmt(best['roc_auc'])} for the selected "
+      f"{config_label(best['config'])} model "
+      f"({model_label(best['model'])}, "
+      f"{calibration_label(best['calibration'])}), a "
+      f"difference well inside either confidence interval; sensitivity "
       f"{fmt(best_lc['sensitivity'], 2)}, NPV "
       f"{fmt(best_lc['npv'], 2)}, Brier {fmt(best_lc['brier'], 4)}, and an "
       f"identified calibration slope of "
