@@ -636,6 +636,21 @@ That result is more interesting than a difference would have been. Serum creatin
 
 Two cautions on reading this. The comparison is a net effect: the continuous arm also handles missing values honestly, where the released arm carries the constants described above, so representation and missingness handling move together. And a null result on a saturated problem is weak evidence about an unsaturated one - on a genuine screening series, where creatinine would have to carry weight that anaemia cannot, the same encoding could matter a great deal. What this section rules out is the specific worry that the published binning is why performance on this benchmark looks the way it does. It is not; the case mix is.
 
+### 5.17 Does the choice of encoding drive any result?
+
+Section 5.16 replaced the bins with the underlying measurements and changed nothing. The complementary question is whether the *number* chosen to represent each bin matters. Four encodings were compared on the identical design, seeds and folds: the reference midpoint encoding; the bin's ordinal position, discarding spacing; that position on a Gaussian-like spacing; and one indicator per bin, discarding order entirely. All four are pure functions of a cell's label and the published bin list, so all are leakage-safe by the same argument as the reference encoding.
+
+| Encoding | Cells | Max columns | Median ROC-AUC | Largest deviation from midpoint |
+|---|---:|---:|---:|---:|
+| `bin_index` | 12 | 14 | 0.992 | 0.0040 |
+| `midpoint` | 12 | 14 | 0.993 | 0.0000 |
+| `onehot` | 12 | 86 | 0.990 | 0.0101 |
+| `rank_normal` | 12 | 14 | 0.992 | 0.0052 |
+
+The largest deviation from the reference encoding across every cell and every alternative is 0.0101 ROC-AUC (`onehot`), inside the bootstrap intervals of section 5.8. The representative-value choice is therefore not load-bearing: neither discarding the spacing between bins, nor discarding their order altogether, moves the results materially.
+
+Taken with section 5.16 this is a reasonably complete answer to the representation question. The published data can be re-expressed as ordinal ranks, as unordered indicators, or replaced outright by the measurements they were derived from, and the models land in the same place each time. That is a further symptom of the ceiling rather than a virtue of the encoding: when a sample separates as easily as this one, most reasonable representations of it will do.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -856,3 +871,4 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `table_35_binned_vs_continuous.csv`
 - `table_36_tripod_ai.csv`
 - `table_36_tripod_ai_summary.csv`
+- `table_37_encoding_robustness.csv`
