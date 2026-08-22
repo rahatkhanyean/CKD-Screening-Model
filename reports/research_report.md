@@ -464,6 +464,27 @@ The largest ROC-AUC optimism across these cells is +0.0072. That optimism is thi
 
 One asymmetry is worth recording: resubstitution is guaranteed to flatter *rank order* (the AUC optimism above is non-negative in every cell), but not the *probability scale*. In 1 cell(s) the apparent Brier score is actually worse than the nested one (Laboratory x SVM (RBF) (0.0399 vs 0.0276)), because the averaged out-of-fold probabilities are better placed on the probability scale than a single resubstitution fit's. Discrimination and calibration do not inflate together, which is one more reason the two must be reported separately.
 
+### 5.12 Label robustness (the four internally inconsistent records)
+
+Four patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60 (CSV lines 12, 18, 52, 123). Because there is no external source of truth to arbitrate, they are kept in the primary analysis and interrogated here instead: the headline cells were re-run with those records **excluded**, and again with their labels **flipped** to `ckd`.
+
+| Configuration | Model | Calibration | ROC-AUC (primary) | Excluded (delta) | Flipped (delta) |
+|---|---|---|---:|---:|---:|
+| Low-cost | SVM (RBF) | Uncalibrated | 0.991 | 0.992 (+0.0010) | 0.967 (-0.0241) |
+| Low-cost | SVM (RBF) | Isotonic | 0.993 | 0.994 (+0.0008) | 0.971 (-0.0220) |
+| Low-cost | Random forest | Uncalibrated | 0.992 | 0.990 (-0.0025) | 0.974 (-0.0184) |
+| Full valid | SVM (RBF) | Uncalibrated | 1.000 | 1.000 (+0.0000) | 0.995 (-0.0051) |
+| Full valid | SVM (RBF) | Isotonic | 1.000 | 1.000 (+0.0000) | 0.995 (-0.0053) |
+| Laboratory | SVM (RBF) | Uncalibrated | 0.995 | 0.995 (+0.0002) | 0.994 (-0.0016) |
+| Laboratory | SVM (RBF) | Isotonic | 0.994 | 0.995 (+0.0013) | 0.992 (-0.0022) |
+| Laboratory | Random forest | Uncalibrated | 0.994 | 0.995 (+0.0012) | 0.993 (-0.0017) |
+
+**Excluding the four records changes nothing.** The largest absolute ROC-AUC change across the cells is 0.0025, an order of magnitude inside the bootstrap intervals, and no cell's sensitivity moves by more than 0.0078. On the deletion reading, limitation 8 is answered: these records are not driving any conclusion.
+
+**Flipping them does not, and the asymmetry is informative.** Treating the stage and eGFR columns as correct costs the low-cost configuration between 0.0184 and 0.0241 ROC-AUC, while the laboratory configuration loses at most 0.0022. The low-cost loss is comparable to the width of the bootstrap intervals themselves, so on this reading label quality is *not* a negligible source of uncertainty for the cheap model.
+
+The mechanism is worth stating plainly, because it is the study's own primary claim placed under stress. These four patients are precisely the ones whose history, examination and dipstick findings look unremarkable while their laboratory values indicate advanced kidney disease. If their `notckd` labels are the errors, then they are exactly the patients a low-cost instrument would miss - and the laboratory panel would not. Four records cannot settle that, but they point the same way as the case-mix analysis in section 5.5: the low-cost result is strongest exactly where the disease is already advanced enough to show up without a laboratory.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found two. Both push measured performance towards 1.0, and neither is clinical usefulness.
@@ -495,7 +516,7 @@ These are not boilerplate. Each one materially constrains what the results above
 5. **Pre-discretised predictors.** The published file contains only binned intervals. Real continuous values are unrecoverable, open-ended tail bins are compressed to their finite edge, and the effective measurement precision of every variable is unknown. A model built on continuous measurements might perform differently in either direction.
 6. **No data dictionary.** The dataset ships without variable definitions [4]. 10 variables have interpretations that could not be settled from the file and are flagged as uncertain rather than resolved by assumption. The tiering of `ane` in particular changes what 'low cost' means, and was decided conservatively.
 7. **Minimal demographic information.** Age is present, in bands. There is no sex, no ethnicity, no socioeconomic indicator, no comorbidity detail beyond three binary flags. Subgroup performance therefore cannot be assessed at all, and undetected differential performance across groups is entirely possible.
-8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Outcome-label noise attenuates every performance estimate here.
+8. **Label quality.** 4 patients are labelled `notckd` while carrying an advanced CKD stage and an eGFR below 60. Either the label or the staging is wrong for those records, and there is no external source of truth to arbitrate. Section 5.12 quantifies both readings: **deleting** them changes nothing (largest |delta ROC-AUC| 0.0025), but **trusting the staging instead of the label** costs the low-cost configuration up to 0.0241 ROC-AUC against at most 0.0022 for the laboratory configuration. Label noise is therefore not a negligible source of uncertainty for the cheap model specifically, and this limitation is only half answered.
 9. **Cross-sectional data, no chronicity.** CKD is defined by abnormalities persisting beyond three months [2]. A single record cannot establish chronicity, so the outcome label itself rests on information not present in the file.
 10. **Prevalence-dependent metrics.** PPV and NPV reported here hold only at this sample's 64.0% prevalence and do not transfer to a community screening setting.
 11. **Linearity assumption for the linear models.** Ordinal bin representatives are entered on their original scale, so logistic regression and the SVM assume an approximately monotone, roughly linear relationship with the log-odds across bins. The tree ensembles and the EBM do not make this assumption.
@@ -621,4 +642,5 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `table_24_provenance_evidence.csv`
 - `table_26_prior_work.csv`
 - `table_26_prior_work_summary.csv`
+- `table_27_label_robustness.csv`
 - `table_29_optimism.csv`

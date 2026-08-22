@@ -64,6 +64,30 @@ def main() -> int:
                                    "Stage 5: explainability and stability")
     timings["07 literature"] = run([py, "scripts/07_literature.py"],
                                    "Stage 7: prior-work survey tables")
+
+    if not args.skip_cv:
+        # Label-robustness variants (N4). Restricted grid; each writes its own
+        # prediction artefacts and never touches the primary ones.
+        for variant, stem in (
+            ("exclude_inconsistent", "cv_predictions_labels_excl"),
+            ("flip_inconsistent", "cv_predictions_labels_flip"),
+        ):
+            timings[f"03v {variant}"] = run(
+                [py, "scripts/03_nested_cv.py",
+                 "--label-variant", variant, "--out", stem,
+                 "--configs", "low_cost_model", "full_valid_model", "laboratory_model",
+                 "--models", "svm", "random_forest",
+                 "--calibrations", "none", "isotonic",
+                 "--n-jobs", str(args.n_jobs)],
+                f"Stage 3 variant: {variant}",
+            )
+    else:
+        print("\nSkipping label-variant CV runs; reusing existing predictions.")
+
+    timings["08 label robustness"] = run([py, "scripts/08_sensitivity_labels.py"],
+                                         "Stage 8: label-robustness comparison")
+    timings["09 optimism"] = run([py, "scripts/09_optimism.py"],
+                                 "Stage 9: optimism accounting")
     timings["06 report"] = run([py, "scripts/06_write_report.py"],
                                "Stage 6: assemble the research report")
     timings["notebook"] = run([py, "scripts/make_notebook.py"],

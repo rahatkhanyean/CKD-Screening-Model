@@ -54,6 +54,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--configs", nargs="*", default=cfg["feature_configs"])
     p.add_argument("--calibrations", nargs="*", default=cfg["calibration_methods"])
     p.add_argument("--out", type=str, default="cv_predictions")
+    p.add_argument(
+        "--label-variant",
+        choices=["none", "exclude_inconsistent", "flip_inconsistent"],
+        default="none",
+        help=(
+            "Sensitivity variants for the 4 internally inconsistent records "
+            "(notckd label with stage s3-s5; CSV lines 12/18/52/123): "
+            "exclude them, or flip their outcome labels. Requires a "
+            "non-default --out so the primary artefacts are never touched."
+        ),
+    )
     return p.parse_args()
 
 
@@ -65,6 +76,39 @@ def main() -> int:
     result = clean_dataset()
     X = feature_matrix(result)
     y = result.target.to_numpy()
+
+    # ---- label-robustness variants (Phase 1c / N4) ----
+    # The four internally inconsistent records are DEFINED by the data
+    # (labelled notckd while staged s3-s5), then asserted against the
+    # documented CSV lines so any silent change in the raw file fails loudly.
+    variant_lines: list[int] = []
+    if args.label_variant != "none":
+        if args.out == "cv_predictions":
+            print("ERROR: --label-variant requires a non-default --out so the "
+                  "primary artefacts are never overwritten.")
+            return 2
+        inconsistent = (
+            (result.clean["class"] == "notckd")
+            & result.clean["stage"].isin(["s3", "s4", "s5"])
+        ).to_numpy()
+        variant_lines = sorted(
+            int(v) for v in result.clean.loc[inconsistent, "source_csv_line"]
+        )
+        assert variant_lines == [12, 18, 52, 123], (
+            f"inconsistent-record definition drifted: {variant_lines}"
+        )
+        if args.label_variant == "exclude_inconsistent":
+            keep = ~inconsistent
+            X = X.loc[keep].reset_index(drop=True)
+            y = y[keep]
+            print(f"label variant: EXCLUDED {int(inconsistent.sum())} records "
+                  f"(CSV lines {variant_lines}); n = {len(y)}")
+        else:  # flip_inconsistent
+            y = y.copy()
+            y[inconsistent] = 1 - y[inconsistent]
+            print(f"label variant: FLIPPED labels of {int(inconsistent.sum())} "
+                  f"records (CSV lines {variant_lines}); n = {len(y)}, "
+                  f"positives = {int(y.sum())}")
 
     models = available_models(list(args.models))
     missing = unavailable_models(list(args.models))
@@ -162,6 +206,8 @@ def main() -> int:
         "calibrations_run": list(args.calibrations),
         "n_patients": int(len(y)),
         "n_positive": int(y.sum()),
+        "label_variant": args.label_variant,
+        "label_variant_csv_lines": variant_lines,
         "runtime_minutes": round(elapsed / 60, 2),
         "n_prediction_rows": int(len(preds)),
         "n_outer_folds_total": int(len(folds)),
@@ -172,8 +218,12 @@ def main() -> int:
     with open(proc_dir / f"{args.out}_manifest.json", "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
 
-    # Which hyper-parameters were selected, and how often?
+    # Which hyper-parameters were selected, and how often? Written only for
+    # the primary run: a restricted or variant run must never overwrite the
+    # reference table.
     param_cols = [c for c in folds.columns if c.startswith("param_")]
+    if args.out != "cv_predictions":
+        param_cols = []
     if param_cols:
         rows = []
         for (config, model), grp in folds.groupby(["config", "model"]):

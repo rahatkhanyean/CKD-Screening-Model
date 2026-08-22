@@ -1,0 +1,40 @@
+{
+  "seed": 20240517,
+  "outer_folds": 5,
+  "inner_folds": 4,
+  "repeats": 5,
+  "inner_scoring": "roc_auc",
+  "target_sensitivity": 0.9,
+  "primary_threshold": 0.5,
+  "models_run": [
+    "svm",
+    "random_forest"
+  ],
+  "models_unavailable": {},
+  "configs_run": [
+    "low_cost_model",
+    "full_valid_model",
+    "laboratory_model"
+  ],
+  "calibrations_run": [
+    "none",
+    "isotonic"
+  ],
+  "n_patients": 196,
+  "n_positive": 128,
+  "label_variant": "exclude_inconsistent",
+  "label_variant_csv_lines": [
+    12,
+    18,
+    52,
+    123
+  ],
+  "runtime_minutes": 7.91,
+  "n_prediction_rows": 11760,
+  "n_outer_folds_total": 300,
+  "config_feature_counts": {
+    "full_valid_model": 25,
+    "low_cost_model": 11,
+    "laboratory_model": 14
+  }
+}

@@ -1297,6 +1297,66 @@ def main() -> int:
           f"the two must be reported separately.")
         w("")
 
+    # ---------------- 5.12 Label robustness ----------------
+    labels = t("table_27_label_robustness.csv")
+    excl = labels[labels["variant"] == "exclude_inconsistent"]
+    flip = labels[labels["variant"] == "flip_inconsistent"]
+    w("### 5.12 Label robustness (the four internally inconsistent records)")
+    w("")
+    w(f"Four patients are labelled `notckd` while carrying an advanced CKD "
+      f"stage and an eGFR below 60 (CSV lines 12, 18, 52, 123). Because "
+      f"there is no external source of truth to arbitrate, they are kept in "
+      f"the primary analysis and interrogated here instead: the headline "
+      f"cells were re-run with those records **excluded**, and again with "
+      f"their labels **flipped** to `ckd`.")
+    w("")
+    w("| Configuration | Model | Calibration | ROC-AUC (primary) | Excluded (delta) | Flipped (delta) |")
+    w("|---|---|---|---:|---:|---:|")
+    for (config, model, calibration), grp in labels.groupby(
+        ["config", "model", "calibration"], sort=False
+    ):
+        e = grp[grp["variant"] == "exclude_inconsistent"]
+        f_ = grp[grp["variant"] == "flip_inconsistent"]
+        e_txt = (f"{e.iloc[0]['variant_roc_auc']:.3f} "
+                 f"({e.iloc[0]['delta_roc_auc']:+.4f})") if len(e) else "-"
+        f_txt = (f"{f_.iloc[0]['variant_roc_auc']:.3f} "
+                 f"({f_.iloc[0]['delta_roc_auc']:+.4f})") if len(f_) else "-"
+        w(f"| {config_label(config)} | {model_label(model)} | "
+          f"{calibration_label(calibration)} | "
+          f"{fmt(grp.iloc[0]['primary_roc_auc'])} | {e_txt} | {f_txt} |")
+    w("")
+    max_excl = float(excl["delta_roc_auc"].abs().max())
+    w(f"**Excluding the four records changes nothing.** The largest "
+      f"absolute ROC-AUC change across the cells is {max_excl:.4f}, an "
+      f"order of magnitude inside the bootstrap intervals, and no cell's "
+      f"sensitivity moves by more than "
+      f"{float(excl['delta_sensitivity'].abs().max()):.4f}. On the "
+      f"deletion reading, limitation 8 is answered: these records are not "
+      f"driving any conclusion.")
+    w("")
+    lc_flip = flip[flip["config"] == "low_cost_model"]["delta_roc_auc"]
+    lab_flip = flip[flip["config"] == "laboratory_model"]["delta_roc_auc"]
+    w(f"**Flipping them does not, and the asymmetry is informative.** "
+      f"Treating the stage and eGFR columns as correct costs the low-cost "
+      f"configuration between {abs(lc_flip.max()):.4f} and "
+      f"{abs(lc_flip.min()):.4f} ROC-AUC, while the laboratory "
+      f"configuration loses at most {abs(lab_flip.min()):.4f}. The "
+      f"low-cost loss is comparable to the width of the bootstrap "
+      f"intervals themselves, so on this reading label quality is *not* a "
+      f"negligible source of uncertainty for the cheap model.")
+    w("")
+    w("The mechanism is worth stating plainly, because it is the study's "
+      "own primary claim placed under stress. These four patients are "
+      "precisely the ones whose history, examination and dipstick findings "
+      "look unremarkable while their laboratory values indicate advanced "
+      "kidney disease. If their `notckd` labels are the errors, then they "
+      "are exactly the patients a low-cost instrument would miss - and the "
+      "laboratory panel would not. Four records cannot settle that, but "
+      "they point the same way as the case-mix analysis in section 5.5: "
+      "the low-cost result is strongest exactly where the disease is "
+      "already advanced enough to show up without a laboratory.")
+    w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
@@ -1436,7 +1496,13 @@ def main() -> int:
       "patients are labelled `notckd` while carrying an advanced CKD stage and "
       "an eGFR below 60. Either the label or the staging is wrong for those "
       "records, and there is no external source of truth to arbitrate. "
-      "Outcome-label noise attenuates every performance estimate here.")
+      "Section 5.12 quantifies both readings: **deleting** them changes "
+      f"nothing (largest |delta ROC-AUC| {max_excl:.4f}), but **trusting "
+      f"the staging instead of the label** costs the low-cost configuration "
+      f"up to {abs(lc_flip.min()):.4f} ROC-AUC against at most "
+      f"{abs(lab_flip.min()):.4f} for the laboratory configuration. Label "
+      "noise is therefore not a negligible source of uncertainty for the "
+      "cheap model specifically, and this limitation is only half answered.")
     w("9. **Cross-sectional data, no chronicity.** CKD is defined by "
       "abnormalities persisting beyond three months [2]. A single record cannot "
       "establish chronicity, so the outcome label itself rests on information "
