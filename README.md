@@ -1,13 +1,14 @@
-# Reliable and Explainable Low-Cost CKD Screening in Bangladesh
+# Three mechanisms inflate reported performance on a widely used public CKD benchmark
 
-**A nested validation, leakage audit, and calibration study.**
+**A leakage-controlled, case-mix-aware re-analysis.**
 
 ---
 
 > ### Scope and safety statement — read first
 >
-> This repository contains an **internally validated, retrospective methodological
-> feasibility study** on 200 patient records from a single hospital.
+> This repository contains a **methodological re-analysis** of a public dataset:
+> 200 records, studied to find out why machine-learning results on this
+> benchmark cluster at the discrimination ceiling.
 >
 > * It is **not a diagnostic tool** and must not be used to make decisions about
 >   any patient.
@@ -24,24 +25,37 @@
 
 ## What this study asks
 
-**Primary question.** Can a small, explainable model predict CKD status using
-inexpensive and routinely available patient information, while keeping
-clinically useful sensitivity and calibrated risk estimates?
+**Primary question.** Why do machine-learning studies on this benchmark
+routinely report accuracy at or near 100 %, and what remains once the
+mechanisms responsible are controlled or measured?
 
-**Secondary questions.**
+Three mechanisms are examined, in the order they were found:
 
-1. How much does target leakage inflate model performance?
-2. Can a reduced-feature (low-cost) model perform comparably to a
-   laboratory-based model?
-3. Are the predicted probabilities properly calibrated?
-4. Are the identified important predictors stable across resampling?
-5. How uncertain are the results, given only 200 patients?
+1. **Target leakage** — how much do outcome-derived columns inflate performance?
+2. **Case-mix (spectrum) composition** — how much is explained by *which
+   patients* the sample contains rather than by what the model learned?
+3. **Pseudo-external validation** — are the cohorts used to validate models on
+   this benchmark actually independent of the cohorts used to train them?
 
-## The dataset, and one fact that shapes everything
+**Supporting questions**, needed to interpret the three: what does dropping
+laboratory variables actually cost; are the probabilities calibrated (and is
+the scale even identified); are the important predictors stable; and how
+uncertain is any of it at n = 200?
 
-`ckd-dataset-v2.csv` holds 200 records collected at Enam Medical College,
-Savar, Bangladesh, in 29 columns, preceded by two metadata rows that are not
-patients.
+## The dataset, and two facts that shape everything
+
+`ckd-dataset-v2.csv` holds 200 records in 29 columns, preceded by two metadata
+rows that are not patients. Its UCI documentation states the records were
+collected at Enam Medical College, Savar, Bangladesh.
+
+**That documented provenance is contradicted by the data.** A record-level
+check (`reports/external/provenance_report.md`) finds all 200 of these patients
+inside the 2015 UCI CKD release (documented as Apollo Hospitals, India) — match
+fraction 1.000 against a permutation null of 0.003 ± 0.003, with 187 patients
+matching a single record uniquely and **zero contradictions** across ten
+categorical variables that took no part in the matching. This file is a
+discretised subset re-release of that earlier dataset. Treat the stated
+collection site, country and year as unverified; no claim here rests on them.
 
 **Every continuous variable in the released file has already been discretised
 into interval strings** — `1.019 - 1.021`, `< 112`, `>= 227.944`. The original
@@ -61,31 +75,44 @@ strictly inside training folds.
 
 Full detail is in [`reports/research_report.md`](reports/research_report.md). In short:
 
+### The three mechanisms
+
 1. **Target leakage takes any configuration to ROC-AUC 1.000.** `affected` is an
    exact copy of the outcome; `stage` is a post-diagnosis label that is 100 % CKD
    in stages s3 and s5; `grf` is the eGFR value that defines staging. Whatever
    the honest baseline was, adding these closes 100 % of the remaining error.
-2. **A second, larger source of optimism: case mix.** Even with every prohibited
+2. **Case mix is larger, and rarely examined.** Even with every prohibited
    column removed, the full valid configuration separates all 200 patients out
    of fold. That is not a residual leak — the guards and an automated test
    confirm it — it is the sample. 107 of 128 CKD patients (84 %) are stage s3–s5,
-   and haemoglobin alone reaches univariate ROC-AUC 0.968. This dataset contrasts
-   advanced kidney disease with comparatively healthy controls, which is not the
-   problem a screening instrument faces. In the early-CKD subgroup, sensitivity
-   falls (low-cost model 0.969 → 0.905; clinical-only 0.891 → 0.762).
-3. **The low-cost model is competitive.** History, examination and a urine
-   dipstick (11 variables, no venepuncture) reach ROC-AUC 0.992 (95 % CI
-   0.981–0.999) against 0.995 for the 14-variable laboratory panel — a difference
-   well inside either interval. Adding urine microscopy changes nothing
-   (0.9919 vs 0.9921), which supports the cost-tiering judgement.
-4. **The low-cost model is also the more trustworthy one.** It has an identified
-   calibration slope (1.26) where the top-ranked full-panel model does not — that
-   model separates perfectly, so its recalibration slope has no maximum-likelihood
-   solution. Its feature importances are far more stable too (Kendall's W 0.694
-   vs 0.471), with `sg`, `al`, `dm` and `htn` in the top 5 of ≥ 80 % of folds.
-5. **Isotonic calibration did *not* overfit here** (median Brier 0.029 vs 0.036
-   for Platt), contrary to the usual small-sample expectation. Reported as
-   observed, with the caveat that the comparison rests on 25 outer folds.
+   and haemoglobin alone reaches univariate ROC-AUC 0.968. In the early-CKD
+   subgroup, sensitivity falls (low-cost 0.969 → 0.905; clinical-only
+   0.891 → 0.762).
+3. **The benchmark's "two datasets" are one.** See above: 3 of the 13 surveyed
+   studies validate across the two releases as though independent, and one
+   merges them into a single training set. Those procedures evaluate models on
+   their own training population. Nothing in either dataset's documentation
+   indicates the overlap — this study registered the 2015 release as its *own*
+   primary external-validation candidate before the check refused it.
+
+### Supporting results
+
+4. **Dropping the laboratory costs little on this sample.** History, examination
+   and a urine dipstick (11 variables, no venepuncture) reach ROC-AUC 0.992
+   (95 % CI 0.981–0.999) against 0.995 for the 14-variable laboratory panel.
+   This is a statement about cost-stratified feature sets on *this* case mix,
+   not about screening.
+5. **The readable model is also the better-calibrated one.** At identical cost
+   the EBM (a pure GAM) gives up 0.0066 ROC-AUC to the SVM but has a calibration
+   slope of 1.009 against 1.257 — the usual accuracy-versus-interpretability
+   trade-off does not bind here. One term (`bp (Diastolic)`) is a suppression
+   effect and is documented as not readable alone.
+6. **Label noise bites the cheap model specifically.** Excluding the four
+   internally inconsistent records changes nothing (|Δ AUC| ≤ 0.0025); *flipping*
+   their labels costs the low-cost set up to 0.0241 — comparable to the CI width
+   — against 0.0022 for the laboratory set.
+7. **Optimism is small (≤ +0.0072), which is itself evidence** about the case
+   mix rather than a licence to skip validation.
 
 None of this is evidence of clinical utility. See the safety statement above and
 the limitations section of the report.
@@ -118,11 +145,16 @@ python scripts/run_all.py
 failure. To run them individually:
 
 ```bash
+python scripts/00_provenance.py            # external-dataset provenance gate         (~30 s)
 python scripts/01_prepare_data.py          # clean, data dictionary, quality audit   (~5 s)
 python scripts/02_eda.py                   # exploratory figures and tables          (~15 s)
 python scripts/03_nested_cv.py             # repeated nested cross-validation        (~72 min)
 python scripts/04_evaluate.py              # metrics, CIs, calibration, leakage audit (~3 min)
 python scripts/05_importance_stability.py  # SHAP, permutation importance, stability (~30 min)
+python scripts/07_literature.py            # prior-work survey tables                 (~1 s)
+python scripts/08_sensitivity_labels.py    # label-robustness comparison              (~5 s)
+python scripts/09_optimism.py              # apparent vs nested-CV performance        (~2 min)
+python scripts/10_ebm_shapes.py            # readable low-cost rule (EBM shapes)      (~9 min)
 python scripts/06_write_report.py          # assemble reports/research_report.md      (~2 s)
 python scripts/make_notebook.py            # regenerate the walkthrough notebook      (~1 s)
 ```

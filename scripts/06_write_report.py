@@ -173,9 +173,10 @@ def main() -> int:
     w = W.append
 
     # =================================================================
-    w("# Reliable and Explainable Low-Cost CKD Screening in Bangladesh")
+    w("# Three mechanisms inflate reported performance on a widely used "
+      "public CKD benchmark")
     w("")
-    w("**A nested validation, leakage audit, and calibration study**")
+    w("**A leakage-controlled, case-mix-aware re-analysis**")
     w("")
     w(f"*Generated {date.today().isoformat()} by `scripts/06_write_report.py`. "
       "Every number in this document is injected directly from the computed "
@@ -185,13 +186,15 @@ def main() -> int:
     w("")
     w("> ### Study-type and safety statement")
     w(">")
-    w("> This is an **internally validated, retrospective, single-centre "
-      "methodological feasibility study**. It is **not a diagnostic tool**, and "
-      "nothing in it should be used to make decisions about any patient. No "
-      "claim is made about clinical utility, causality, deployment readiness or "
-      "generalisability to any other population. **External and prospective "
-      "validation would be required** before these findings could be considered "
-      "clinically meaningful.")
+    w("> This is a **methodological re-analysis** of a public dataset, not a "
+      "clinical study. Its object is the measurement process: how much of the "
+      "near-perfect performance routinely reported on this benchmark is "
+      "produced by properties of the data rather than by predictive ability. "
+      "It is **not a diagnostic tool**, and nothing in it should be used to "
+      "make decisions about any patient. No claim is made about clinical "
+      "utility, causality, deployment readiness or generalisability to any "
+      "population. Where models are compared, the comparison is evidence "
+      "about the benchmark, not a recommendation to deploy anything.")
     w("")
     w("---")
     w("")
@@ -199,23 +202,28 @@ def main() -> int:
     # ---------------- Abstract ----------------
     w("## Abstract")
     w("")
-    w("**Background.** Chronic kidney disease (CKD) is common, largely "
-      "asymptomatic until advanced, and disproportionately burdensome where "
-      "laboratory access is limited. Whether inexpensive, routinely available "
-      "information can support CKD screening is therefore a question worth "
-      "asking - but published machine-learning studies on small CKD datasets "
-      "frequently report near-perfect accuracy, which is a signature of target "
-      "leakage rather than of clinical usefulness.")
+    lit_summary_ab = t("table_26_prior_work_summary.csv").set_index("quantity")["value"]
+    w(f"**Background.** Machine-learning studies on the public UCI chronic "
+      f"kidney disease (CKD) benchmarks routinely report accuracy at or "
+      f"near 100%. In a structured survey of "
+      f"{int(lit_summary_ab['n_studies_surveyed'])} such studies, every "
+      f"independently verified headline metric on the diagnostic task sits "
+      f"at or above 99%, "
+      f"{int(lit_summary_ab['n_kabir_coded_sc_egfr_yes'])} are coded as "
+      f"using serum creatinine or eGFR as inputs, and "
+      f"{int(lit_summary_ab['n_with_genuinely_external_validation'])} has a "
+      f"validation cohort that is genuinely external. Such numbers are more "
+      f"often a property of the data than evidence of clinical usefulness.")
     w("")
-    w(f"**Objective.** To assess, under leakage-controlled repeated nested "
-      f"cross-validation, whether a small explainable model can predict CKD "
-      f"status from low-cost variables with useful sensitivity and calibrated "
-      f"risk estimates; and to quantify how much target leakage inflates "
-      f"apparent performance.")
+    w(f"**Objective.** To identify and quantify the mechanisms that produce "
+      f"near-perfect measured performance on this benchmark, and to "
+      f"establish what predictive signal remains once each is controlled "
+      f"or measured.")
     w("")
     w(f"**Methods.** {n_tot} patient records "
-      f"({n_pos} CKD, {n_neg} non-CKD) collected at Enam Medical College, Savar, "
-      f"Bangladesh. All continuous variables were already discretised into "
+      f"({n_pos} CKD, {n_neg} non-CKD) from the UCI 'Risk Factor Prediction "
+      f"of Chronic Kidney Disease' release. All continuous variables were "
+      f"already discretised into "
       f"interval bins in the released file. Six feature configurations were "
       f"compared, including one **deliberately invalid** set containing an exact "
       f"copy of the outcome (`affected`), the post-diagnosis stage label "
@@ -290,7 +298,7 @@ def main() -> int:
       f"the {manifest['outer_folds'] * manifest['repeats']} outer folds "
       f"(Kendall's W = {fmt(kendall)}).")
     w("")
-    w(f"**A second, larger source of optimism was identified.** Even without any "
+    w(f"**Mechanism 2, case mix, is larger than mechanism 1.** Even without any "
       f"prohibited column, valid configurations sit close to the discrimination "
       f"ceiling, and a post hoc case-mix analysis explains why: "
       f"{n_advanced} of the {n_pos} CKD patients ({n_advanced/n_pos:.0%}) are "
@@ -307,18 +315,50 @@ def main() -> int:
       f"{fmt(clin_early['sensitivity'], 3) if clin_early is not None else 'n/a'} "
       f"for the clinical-only model.")
     w("")
-    w(f"**Conclusions.** Target leakage inflates apparent performance on this "
-      f"dataset, and case mix inflates it further and by more. Together these "
-      f"explain the near-perfect results commonly reported for this data far "
-      f"better than genuine screening ability does. Under leakage-controlled "
-      f"validation the low-cost variable set retains "
+    prov_ab = t("table_24_provenance.csv")
+    uci_ab = prov_ab[prov_ab["dataset_id"] == "uci2015"]
+    agree_ab = t("table_24_provenance_agreement.csv")
+    lit_ab = t("table_26_prior_work.csv")
+    n_cross_ab = int((lit_ab["did_external_validation"] == "pseudo-external").sum())
+    if len(uci_ab):
+        r_ab = uci_ab.iloc[0]
+        w(f"**Mechanism 3: the benchmark's two releases are not independent "
+          f"cohorts.** A record-level provenance check registered before any "
+          f"external claim found that all "
+          f"{int(r_ab['rows_with_any_partner'])} patients in this file match "
+          f"into the 2015 UCI CKD release (maximum bipartite match fraction "
+          f"{float(r_ab['containment_match_fraction']):.3f} against a "
+          f"permutation null of "
+          f"{float(r_ab['containment_null_mean']):.3f} +/- "
+          f"{float(r_ab['containment_null_sd']):.3f}), "
+          f"{int(agree_ab['n_unique_pins'].iloc[0]) if len(agree_ab) else 0} "
+          f"of them uniquely, with "
+          f"{int(agree_ab['n_contradictions'].sum()) if len(agree_ab) else 0} "
+          f"contradictions across "
+          f"{int(agree_ab['variable'].nunique()) if len(agree_ab) else 0} "
+          f"categorical variables that took no part in the matching. This "
+          f"file is a discretised subset re-release of that dataset. "
+          f"{n_cross_ab} of the surveyed studies validate models across the "
+          f"two releases as though they were independent cohorts, and one "
+          f"merges them into a single training set.")
+        w("")
+    w(f"**Conclusions.** Three distinct mechanisms drive measured performance "
+      f"on this benchmark toward 1.0, and none of them is predictive ability: "
+      f"target leakage, a case mix dominated by advanced disease, and "
+      f"validation cohorts that share their patients with the training data. "
+      f"Case mix is the largest of the three and the least often controlled. "
+      f"Under leakage-controlled validation a variable set costing no "
+      f"venepuncture retains "
       f"{'much' if low['roc_auc'] >= 0.9 * lab['roc_auc'] else 'only part'} of "
-      f"the discrimination available from laboratory measurements, but the "
-      f"headline figures should not be read as screening performance. These are "
-      f"internal, {n_tot}-patient, single-centre estimates with wide confidence "
-      f"intervals; they establish methodological feasibility only, and external "
-      f"and prospective validation in a genuine screening population would be "
-      f"required before any clinical claim could be made.")
+      f"the discrimination available from laboratory measurements, and an "
+      f"additive model matches it with an identified probability scale - but "
+      f"no figure here estimates screening performance, because this sample "
+      f"is not a screening series. These are internal, {n_tot}-patient, "
+      f"single-centre estimates; the study has no external validation and "
+      f"cannot obtain one from the sources examined. What it offers instead "
+      f"is a reusable procedure: declare prohibited columns, enforce them "
+      f"programmatically, test the case mix before believing the "
+      f"discrimination, and check that an external cohort is external.")
     w("")
 
     # ---------------- Introduction ----------------
@@ -334,14 +374,24 @@ def main() -> int:
       "rather than on presentation, which makes the cost and availability of "
       "the test a first-order determinant of who gets diagnosed.")
     w("")
-    w("That motivates a specific technical question: how much of the "
+    w("That clinical importance is why the public UCI CKD datasets have "
+      "become standard benchmarks: they are small, tidy, and answer a "
+      "question that matters. It is also why the results reported on them "
+      "deserve scrutiny. A benchmark on which almost every method reports "
+      "near-perfect accuracy has stopped discriminating between methods, "
+      "and the interesting question becomes what, in the data, is "
+      "producing the ceiling.")
+    w("")
+    w("A secondary question follows once the ceiling is understood: how "
+      "much of the "
       "discriminative information in a CKD assessment is carried by variables "
       "that cost almost nothing to obtain - history, physical examination, and a "
       "urine reagent strip - relative to variables that require venepuncture and "
       "a laboratory analyser?")
     w("")
     lit_summary = t("table_26_prior_work_summary.csv").set_index("quantity")["value"]
-    w(f"There is a well-documented hazard in answering this with machine "
+    w(f"There is a well-documented hazard in answering either question with "
+      f"machine "
       f"learning on small clinical datasets, and it is not hypothetical for "
       f"this data. A structured survey of prior studies on this dataset and "
       f"its parent release (`reports/tables/table_26_prior_work.csv`; "
@@ -385,17 +435,35 @@ def main() -> int:
     # ---------------- Research questions ----------------
     w("## 2. Research questions")
     w("")
-    w("**Primary.** Can a small, explainable model predict CKD status using "
-      "inexpensive and routinely available patient information, while "
-      "maintaining clinically useful sensitivity and calibrated risk estimates?")
+    w("**Primary.** Why do machine-learning studies on this benchmark "
+      "routinely report accuracy at or near 100%, and what remains once the "
+      "mechanisms responsible are controlled or measured?")
     w("")
-    w("**Secondary.**")
+    w("Three candidate mechanisms are examined, in the order they were "
+      "found:")
     w("")
-    w("1. How much does target leakage inflate model performance?")
-    w("2. Can a reduced-feature model perform comparably to a laboratory-based model?")
-    w("3. Are predicted probabilities properly calibrated?")
-    w("4. Are the identified important predictors stable across resampling?")
-    w("5. How uncertain are the results, given only 200 patients?")
+    w("1. **Target leakage.** How much does including outcome-derived "
+      "columns inflate measured performance? (Section 5.2)")
+    w("2. **Case-mix (spectrum) composition.** How much of the remaining "
+      "performance is explained by *which patients* the sample contains "
+      "rather than by what the model learned? (Section 5.5)")
+    w("3. **Pseudo-external validation.** Are the cohorts used to validate "
+      "models on this benchmark actually independent of the cohorts used "
+      "to train them? (Section 5.14)")
+    w("")
+    w("**Supporting questions**, addressed because they are needed to "
+      "interpret the three mechanisms rather than for their own sake:")
+    w("")
+    w("4. Under leakage-controlled validation, how much discrimination "
+      "survives when expensive laboratory variables are removed - i.e. "
+      "what does a cost-stratified feature set actually cost? "
+      "(Sections 5.3, 5.12)")
+    w("5. Are predicted probabilities calibrated, and is the probability "
+      "scale even identified? (Section 5.6)")
+    w("6. Are the identified important predictors stable across "
+      "resampling? (Section 5.7)")
+    w("7. How uncertain is any of this, given 200 patients? "
+      "(Sections 5.8, 5.11, 5.13)")
     w("")
 
     # ---------------- Dataset ----------------
@@ -404,11 +472,24 @@ def main() -> int:
     w("")
     w("### 3.1 Source and provenance")
     w("")
-    w(f"The analysis uses `ckd-dataset-v2.csv`, {n_tot} patient records collected "
-      f"at Enam Medical College, Savar, Dhaka, Bangladesh. The same data are "
+    w(f"The analysis uses `ckd-dataset-v2.csv`, {n_tot} patient records "
       f"distributed by the UCI Machine Learning Repository as *Risk Factor "
       f"Prediction of Chronic Kidney Disease* (creators Md. Ashiqul Islam and "
-      f"Shamima Akter), under CC BY 4.0 [4].")
+      f"Shamima Akter), under CC BY 4.0 [4]. Its documentation states that "
+      f"the records were collected at Enam Medical College, Savar, Dhaka, "
+      f"Bangladesh.")
+    w("")
+    w("**That documented provenance is contradicted by the data itself.** "
+      "Section 5.14 reports a record-level check, run before any external "
+      "claim was permitted, which finds every one of these patients present "
+      "in the 2015 UCI CKD release (documented as Apollo Hospitals, India), "
+      "187 of them matching a single record uniquely and agreeing on ten "
+      "categorical variables that took no part in the matching. The file "
+      "analysed here is a discretised subset re-release of that earlier "
+      "dataset. We report the measurement and take no view on how the "
+      "discrepancy arose; readers should treat the stated collection site, "
+      "country and year as unverified, and this study makes no claim that "
+      "rests on them.")
     w("")
     w(f"- SHA-256 of the analysed file: `{prov['sha256']}`")
     w(f"- Shape as read (header excluded): "
@@ -1418,11 +1499,99 @@ def main() -> int:
       "already advanced enough to show up without a laboratory.")
     w("")
 
+    # ---------------- 5.14 Pseudo-external validation ----------------
+    prov_table = t("table_24_provenance.csv")
+    agree_table = t("table_24_provenance_agreement.csv")
+    lit_table = t("table_26_prior_work.csv")
+    same_source = prov_table[prov_table["verdict"] == "SAME-SOURCE"]
+    uci = prov_table[prov_table["dataset_id"] == "uci2015"]
+    w("### 5.14 Pseudo-external validation: the benchmark's two releases "
+      "share their patients (mechanism 3)")
+    w("")
+    w("The two mechanisms above concern a single dataset. The third "
+      "concerns how this dataset is used in the literature. Several "
+      "published studies validate models trained on the 2015 UCI CKD "
+      "release against this file - distributed separately, with a "
+      "different stated collection site, sample size and year - and "
+      "present the result as external validation. That inference requires "
+      "the two releases to contain different patients.")
+    w("")
+    w("They do not. Every candidate dataset registered for this study was "
+      "put through a record-level provenance check before any external "
+      "claim was permitted (`reports/external/provenance_report.md`). "
+      "Each of this file's patients is represented as a vector of "
+      "intervals over the shared variables; a record in a candidate "
+      "dataset is *compatible* with a patient when the outcome matches and "
+      "every shared value falls inside that patient's interval. The "
+      "observed maximum bipartite matching is then calibrated against "
+      "column permutations that preserve every marginal distribution while "
+      "destroying cross-variable structure.")
+    w("")
+    if len(uci):
+        r = uci.iloc[0]
+        w("| Quantity | Value |")
+        w("|---|---|")
+        w(f"| Patients in this file matched into the 2015 release | "
+          f"{int(r['rows_with_any_partner'])} / 200 |")
+        w(f"| Maximum bipartite match fraction | "
+          f"{float(r['containment_match_fraction']):.3f} |")
+        w(f"| Permutation null (mean +/- SD) | "
+          f"{float(r['containment_null_mean']):.3f} +/- "
+          f"{float(r['containment_null_sd']):.3f} |")
+        w(f"| Permutation null (maximum observed) | "
+          f"{float(r['containment_null_max']):.3f} |")
+        w(f"| Verdict | **{r['verdict']}** |")
+        w("")
+    if len(agree_table):
+        n_pins = int(agree_table["n_unique_pins"].iloc[0])
+        n_vars = int(agree_table["variable"].nunique())
+        n_compared = int(agree_table["n_pairs_compared"].sum())
+        n_contra = int(agree_table["n_contradictions"].sum())
+        w(f"Matching on intervals could in principle be coincidence, so the "
+          f"pairing was checked against evidence it had no access to. "
+          f"{n_pins} of the 200 patients are compatible with exactly **one** "
+          f"record in the 2015 release. Across those pairs, "
+          f"{n_vars} categorical variables that took no part in the "
+          f"matching agree in {n_compared} comparisons with "
+          f"**{n_contra} contradictions**. A coincidental alignment does "
+          f"not reproduce ten unused variables.")
+        w("")
+    w("The conclusion is that this file is a discretised subset "
+      "re-release of the 2015 dataset. Its documented provenance - a "
+      "different country, hospital and year - cannot be reconciled with "
+      "record-level identity; we report the measurement and take no view "
+      "on how the discrepancy arose.")
+    w("")
+    cross = lit_table[lit_table["did_external_validation"] == "pseudo-external"]
+    w(f"The consequence for the published record is direct. Of the "
+      f"{len(lit_table)} studies surveyed in section 1, **{len(cross)}** "
+      f"validate across these two releases as though they were independent "
+      f"cohorts, and one of those merges them into a single training set "
+      f"before reporting accuracy. On the evidence above, those procedures "
+      f"evaluate models on their own training population. This is not a "
+      f"criticism of the authors: nothing in either dataset's "
+      f"documentation indicates the overlap, and the present study "
+      f"registered the 2015 release as its own primary external-validation "
+      f"candidate before the check refused it.")
+    w("")
+    w("Two implications follow for this report. First, the study has no "
+      "external validation and cannot acquire one from these sources; "
+      "every estimate here is internal, and the gate that produced this "
+      "finding also blocks the 2015 release from every external-validation "
+      "table (`tests/test_external.py::TestProvenanceGate`). Second, "
+      "because the overlap is with a *continuous-valued* release of the "
+      "same patients, the information destroyed by pre-discretisation can "
+      "be recovered for this cohort and measured directly - a comparison "
+      "that is possible precisely because the cohorts are not independent.")
+    w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
-    w("This study set out to measure one failure mode and found two. Both push "
-      "measured performance towards 1.0, and neither is clinical usefulness.")
+    w("This study set out to measure one failure mode and found three. Each "
+      "pushes measured performance towards 1.0, none of them is predictive "
+      "ability, and they compound: controlling any one still leaves the "
+      "others free to produce a near-perfect number.")
     w("")
     w(f"The first is **target leakage**. Including an exact copy of the outcome, "
       f"a post-diagnosis stage label and the diagnostic eGFR value takes every "
@@ -1468,13 +1637,29 @@ def main() -> int:
       "1.0 on this sample should therefore be read as a statement about the "
       "sample, not about the method.")
     w("")
-    w("This also reframes what a 'high-performing' published result on this "
-      "dataset means. Two distinct mechanisms - target leakage and case-mix "
-      "spectrum - both push measured performance towards the ceiling, and "
-      "neither has anything to do with clinical usefulness. A study reporting "
-      "99% accuracy on this data has probably encountered one or both, and "
-      "cannot distinguish them without exactly the kind of subgroup and "
-      "leakage analysis reported here.")
+    w("The third mechanism is **pseudo-external validation**, and it is the "
+      "one that cannot be fixed by analysing this dataset more carefully. "
+      "Section 5.14 shows that the two releases treated in the literature as "
+      "independent cohorts share their patients record-for-record. A study "
+      "that trains on one and validates on the other has measured "
+      "resubstitution performance with extra steps, and will see exactly "
+      "what it expects to see: near-perfect transfer. Unlike leakage, this "
+      "failure is invisible from inside either file - both look like "
+      "well-formed, separately documented datasets - which is why a "
+      "provenance check belongs before the modelling, not after a "
+      "surprising result.")
+    w("")
+    w("Together these reframe what a 'high-performing' published result on "
+      "this benchmark means. Three distinct mechanisms - target leakage, "
+      "case-mix spectrum, and non-independent validation cohorts - each push "
+      "measured performance towards the ceiling, and none has anything to do "
+      "with clinical usefulness. A study reporting 99% accuracy on this data "
+      "has probably encountered at least one, and cannot distinguish them "
+      "without the leakage audit, subgroup analysis and provenance check "
+      "reported here. The three are also ordered by how easy they are to "
+      "miss: leakage is visible in the column list, case mix requires "
+      "looking at who is in the sample, and cohort overlap requires "
+      "comparing two datasets nobody had reason to suspect were one.")
     w("")
     if best["config"] != "low_cost_model":
         w(f"Note that the best valid model overall used the "
@@ -1513,12 +1698,17 @@ def main() -> int:
       f"resolvable. Events per candidate predictor "
       f"({quality['class_distribution']['events_per_candidate_predictor_full_valid']}) "
       f"is far below accepted minimums for prediction-model development [5].")
-    w("2. **No external validation.** Every estimate is internal to these 200 "
-      "patients. Internal cross-validation systematically overstates the "
-      "performance a model would show in a new population, and no correction "
-      "applied here changes that.")
-    w("3. **Hospital-based, single-centre sampling.** Patients presenting at "
-      "one medical college in Savar are not a random sample of any population. "
+    w("2. **No external validation, and none obtainable from the obvious "
+      "source.** Every estimate is internal to these 200 patients. Internal "
+      "cross-validation systematically overstates the performance a model "
+      "would show in a new population, and no correction applied here "
+      "changes that. The natural remedy - validating against the larger "
+      "2015 UCI release, which shares this file's variable vocabulary - is "
+      "unavailable: section 5.14 shows the two share their patients. The "
+      "provenance gate blocks that dataset from every external-validation "
+      "table, so this limitation is enforced rather than merely stated.")
+    w("3. **Hospital-based, single-centre sampling.** These patients are not "
+      "a random sample of any population. "
       f"The {n_pos/n_tot:.1%} CKD prevalence is a property of who was recruited, "
       "not of any community. Selection bias is likely and its direction is "
       "unknown.")
@@ -1665,18 +1855,24 @@ def main() -> int:
     # ---------------- Conclusion ----------------
     w("## 10. Conclusion")
     w("")
-    w(f"Under repeated nested cross-validation with programmatically enforced "
-      f"leakage control, a small model built only from history, physical "
-      f"examination and a urine reagent strip achieved ROC-AUC "
-      f"{fmt(low['roc_auc'])} (95% CI {fmt(low['roc_auc_ci_low'])}-"
-      f"{fmt(low['roc_auc_ci_high'])}) for CKD status in this 200-patient "
-      f"single-centre sample, against {fmt(lab['roc_auc'])} for the "
-      f"laboratory-only configuration (best model per configuration, "
-      f"uncalibrated, as in section 5.3). Including the dataset's three "
-      f"prohibited columns raised ROC-AUC to {fmt(leaky['roc_auc'])}, "
-      f"quantifying the inflation that leakage produces and offering a concrete "
-      f"explanation for the near-perfect results frequently reported on this "
-      f"data.")
+    w(f"Machine-learning results on this benchmark cluster at the "
+      f"discrimination ceiling. This re-analysis identifies three mechanisms "
+      f"that put them there, none of which is predictive ability.")
+    w("")
+    w(f"**Target leakage** is the visible one: the file ships an exact copy "
+      f"of the outcome, a post-diagnosis stage label and the diagnostic "
+      f"eGFR value, and including them takes every configuration to ROC-AUC "
+      f"{fmt(leaky['roc_auc'])}. **Case mix** is the larger one: with every "
+      f"prohibited column removed and leakage prevented by a guard that "
+      f"raises rather than drops, the full valid configuration still "
+      f"separates all {n_tot} patients out of fold, because "
+      f"{n_advanced} of {n_pos} cases ({n_advanced/n_pos:.0%}) carry "
+      f"stage s3-s5 disease and haemoglobin alone reaches univariate "
+      f"ROC-AUC {fmt(top_sep['univariate_auc'])}. **Non-independent "
+      f"validation cohorts** are the least visible: the two releases the "
+      f"literature treats as separate share their patients "
+      f"record-for-record, so published cross-dataset validations between "
+      f"them measure resubstitution.")
     w("")
     w(f"The prespecified selection rule, which ranks on discrimination alone, "
       f"picks **{model_label(best['model'])} on the "
@@ -1722,18 +1918,34 @@ def main() -> int:
       f"leakage and case-mix spectrum - push measured performance towards the "
       f"ceiling on this dataset, and neither reflects clinical usefulness.")
     w("")
-    w("What this study supports is a methodological claim: leakage-controlled "
-      "validation is achievable on this data, the low-cost variable set carries "
-      "real signal, and the honest performance is meaningfully lower than the "
-      "published record suggests - most of all for the early-stage patients a "
-      "screening programme exists to find. What it does not support is any "
-      "claim about clinical utility, causality, deployment readiness or "
-      "generalisability. The estimates are internal to 200 patients from one "
-      "hospital, with pre-discretised predictors, a case mix dominated by "
-      "advanced disease, no demographic detail beyond age bands, and confidence "
-      "intervals wide enough to encompass materially different conclusions. "
-      "**External and prospective validation in a genuine screening population "
-      "would be required** before any clinical interpretation is warranted.")
+    w("What this study supports is a methodological claim in two parts. "
+      "First, about this benchmark: the numbers reported on it are largely "
+      "explained by three properties of the data, the largest of which - "
+      "case mix - is rarely examined, and the least visible of which - "
+      "cohort overlap - invalidates the cross-dataset validations that "
+      "would otherwise be its strongest evidence. Second, about method: "
+      "every one of the three was found by a check that can be run before "
+      "any model is fitted. Declare the prohibited columns and enforce them "
+      "with something that raises rather than drops; look at the stage "
+      "distribution and the univariate separability before believing a "
+      "discrimination figure; and verify that a validation cohort is "
+      "actually a different set of patients. Each check is cheap; each one "
+      "here changed a conclusion.")
+    w("")
+    w("What the study does not support is any claim about clinical utility, "
+      "causality, deployment readiness or generalisability. The estimates "
+      "are internal to 200 patients, with pre-discretised predictors, a "
+      "case mix dominated by advanced disease, no demographic detail beyond "
+      "age bands, four records whose labels contradict their own staging, "
+      "and confidence intervals wide enough to encompass materially "
+      "different conclusions. The cost-stratified comparison reported here "
+      "says something about how much discrimination survives dropping "
+      "laboratory variables **on this sample**; it says nothing about "
+      "screening, because a sample in which 84% of cases have "
+      "moderate-to-severe disease is not a screening population. "
+      "**Prospective validation in a genuine screening series would be "
+      "required** before any clinical interpretation is warranted, and no "
+      "dataset examined here can substitute for it.")
     w("")
 
     # ---------------- References ----------------

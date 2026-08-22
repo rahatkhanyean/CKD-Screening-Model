@@ -130,6 +130,61 @@ class TestHeadlineNumbersMatchTables:
             )
 
 
+class TestReframedFraming:
+    """Phase 2 locked the report onto the three-mechanisms thesis. These
+    tests keep the framing from drifting back to a screening claim the
+    data cannot support."""
+
+    def test_title_is_the_mechanisms_thesis(self, report_text):
+        first_line = report_text.splitlines()[0]
+        assert first_line.startswith("# ")
+        assert "mechanism" in first_line.lower()
+        assert "Bangladesh" not in first_line
+
+    def test_all_three_mechanisms_have_result_sections(self, report_text):
+        headings = re.findall(r"^### 5\.\d+ .*$", report_text, re.MULTILINE)
+        blob = " ".join(headings).lower()
+        assert "leakage audit" in blob
+        assert "case mix" in blob
+        assert "pseudo-external" in blob
+
+    def test_provenance_contradiction_is_stated_where_provenance_is(self, report_text):
+        match = re.search(r"### 3\.1 .*?\n(.*?)\n### 3\.2", report_text, re.DOTALL)
+        assert match, "section 3.1 not found"
+        section = match.group(1)
+        assert "Bangladesh" in section, "documented provenance should still be reported"
+        assert "contradicted" in section.lower()
+        assert "unverified" in section.lower()
+
+    def test_no_screening_performance_claim_survives(self, report_text):
+        """A headline number may never be asserted AS screening
+        performance: the sample is not a screening series. The phrase may
+        appear only inside a sentence that denies or qualifies it."""
+        denial = re.compile(
+            r"\bnot\b|\bnever\b|\bno\b|\bcannot\b|\bnothing\b"
+            r"|overstate|than they are|far more like|would be required",
+            re.IGNORECASE,
+        )
+        for match in re.finditer(r"screening performance", report_text, re.IGNORECASE):
+            start = report_text.rfind(".", 0, max(0, match.start() - 1)) + 1
+            end = report_text.find(".", match.end())
+            sentence = report_text[start: end if end != -1 else len(report_text)]
+            assert denial.search(sentence), (
+                f"unqualified screening-performance claim: {sentence.strip()[:200]}"
+            )
+
+    def test_bangladesh_framing_confined_to_provenance_discussion(self, report_text):
+        """The collection site is unverified, so it may appear only where
+        the report is discussing provenance - never in a title, claim or
+        conclusion."""
+        for match in re.finditer(r"Bangladesh", report_text):
+            window = report_text[max(0, match.start() - 400): match.start() + 400]
+            assert re.search(
+                r"provenance|contradict|documentation|unverified|states that",
+                window, re.IGNORECASE,
+            ), f"Bangladesh framing outside provenance context: ...{window[:160]}"
+
+
 class TestHonestAttribution:
     def test_full_valid_auc_never_labelled_laboratory(self, conclusion):
         """The original conclusion defect: the Full-valid ROC-AUC captioned
