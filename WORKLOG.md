@@ -4,6 +4,73 @@ Newest entries at the top. One entry per work session / phase milestone.
 
 ---
 
+## 2026-08-22 — Phase 1 COMPLETE (1a–1e). Two new substantive findings.
+
+Commits `2b93315` (1a), `56872c1` (1b), `45e8f10`+`b883aec` (1e),
+`061f123` (1c), `3e8d23a` (1d). Full suite **319 passed** (was 227).
+
+**1a — report inconsistencies fixed, then made unrepeatable.** The
+abstract's `slope n/a` now states non-identification explicitly; §5.3
+gains a "Best model" column and an uncalibrated-provenance caption so
+0.992-vs-0.993 is self-explaining; the conclusion no longer calls the
+Full-valid AUC "the full laboratory panel". `tests/test_report.py` (12)
+re-derives every headline number from its source table and fails on
+unresolved template tokens.
+
+**1b — the uncited claim is now counted evidence.**
+`data/literature/prior_work.csv`: 13 studies, per-row verification
+provenance. 3 independently verified; 10 flagged `todo_hand_check`.
+Introduction now reads: 2 of 3 verified headline metrics ≥99%, 9/13 coded
+as using SC/eGFR, exactly **1** genuinely external validation — plus a new
+paragraph tying the 3 pseudo-external cross-dataset studies to the
+Phase 0 provenance finding. Paywalls (Wiley, ScienceDirect, BSPC) blocked
+automated verification of several; those rows say so rather than guess.
+
+**1e — optimism is small, and that is itself evidence.** Largest ROC-AUC
+optimism across six headline cells is **+0.0072**. Reported as another
+symptom of the case-mix ceiling, not as a licence to skip validation.
+Found and fixed an aggregation mismatch (initial version pooled
+predictions differently from the published tables) by reusing
+`pooled_predictions`. Also recorded an asymmetry worth keeping:
+resubstitution flatters rank order but **not** the probability scale —
+laboratory×SVM has apparent Brier 0.0399 vs nested 0.0276.
+
+**1c — NEW FINDING that qualifies the study's own primary claim.**
+Excluding the 4 inconsistent records changes nothing (largest |ΔAUC|
+0.0025). **Flipping** their labels costs the low-cost configuration up to
+**0.0241 ROC-AUC** — comparable to the bootstrap CI width — while the
+laboratory configuration loses at most 0.0022. Mechanism: these are
+exactly the patients whose cheap findings look unremarkable while their
+labs indicate advanced disease. If their `notckd` labels are the errors,
+they are the patients a low-cost instrument would miss. Limitation 8
+rewritten from "answered" to **half-answered**.
+
+**1d — the readable rule, and a suppression term.** At identical cost the
+low-cost EBM gives up only 0.0066 AUC to the SVM but has calibration slope
+**1.009 vs 1.257** — the readable model is also the better-calibrated one,
+so the usual accuracy-vs-interpretability trade-off does not bind here.
+Shape functions are clinically coherent and independently confirm the
+`appet` polarity the released file never documented (agreeing with the
+Phase 0 provenance mapping). **One term must not be read alone:**
+`bp (Diastolic)` runs opposite its marginal association (ρ −0.984 vs
+signed AUC 0.553) — a suppression effect beside `bp limit`/`htn`,
+documented in `table_28_ebm_shape_notes.txt` and discussed in §5.12.
+
+**Engineering.** `03_nested_cv.py --label-variant` requires a non-default
+`--out`, and `table_07` is now written only by the primary run, so no
+variant or restricted run can overwrite reference artefacts. `run_all.py`
+now runs 00 → 01 → 02 → 03 (+2 variants) → 04 → 05 → 07 → 08 → 09 → 10 →
+06. Two Google-Drive/git incidents: a stale `packed-refs.lock` (cleared;
+`fsck` clean, commit intact) — the predicted sync symptom, mitigated by
+frequent commits as planned.
+
+**Open for Phase 2:** restructure the report around the two-mechanisms
+thesis (now arguably *three*: leakage, case mix, pseudo-external
+validation) and retitle. The icddr,b data request remains the single most
+valuable outstanding item.
+
+---
+
 ## 2026-08-22 — Phase 0 COMPLETE. Provenance gate verdict: the benchmark's "two datasets" are one
 
 **The finding.** `scripts/00_provenance.py` (new stage, gated by
