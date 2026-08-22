@@ -43,6 +43,8 @@ def main() -> int:
     py = sys.executable
     timings: dict[str, float] = {}
 
+    timings["00 provenance"] = run([py, "scripts/00_provenance.py"],
+                                   "Stage 0: external-dataset provenance gate")
     timings["01 prepare data"] = run([py, "scripts/01_prepare_data.py"], "Stage 1: data preparation")
     timings["02 EDA"] = run([py, "scripts/02_eda.py"], "Stage 2: exploratory analysis")
 
@@ -60,6 +62,8 @@ def main() -> int:
     timings["04 evaluate"] = run([py, "scripts/04_evaluate.py"], "Stage 4: evaluation and calibration")
     timings["05 importance"] = run([py, "scripts/05_importance_stability.py"],
                                    "Stage 5: explainability and stability")
+    timings["07 literature"] = run([py, "scripts/07_literature.py"],
+                                   "Stage 7: prior-work survey tables")
     timings["06 report"] = run([py, "scripts/06_write_report.py"],
                                "Stage 6: assemble the research report")
     timings["notebook"] = run([py, "scripts/make_notebook.py"],

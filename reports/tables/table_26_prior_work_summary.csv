@@ -1,0 +1,10 @@
+quantity,value
+n_studies_surveyed,13
+n_independently_verified,3
+n_awaiting_hand_check,12
+n_with_numeric_headline_metric,3
+n_verified_metric_geq_099,2
+n_kabir_coded_sc_egfr_yes,9
+n_using_uci2023_or_merged,4
+n_cross_dataset_uci2015_uci2023,3
+n_with_genuinely_external_validation,1

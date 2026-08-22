@@ -32,7 +32,9 @@ Chronic kidney disease affects roughly 9% of the world's population and caused a
 
 That motivates a specific technical question: how much of the discriminative information in a CKD assessment is carried by variables that cost almost nothing to obtain - history, physical examination, and a urine reagent strip - relative to variables that require venepuncture and a laboratory analyser?
 
-There is a well-documented hazard in answering this with machine learning on small clinical datasets. Published analyses of this particular dataset, and of CKD datasets generally, frequently report accuracy at or near 100%. Such results are rarely evidence of clinical usefulness; far more often they indicate that a predictor encodes the outcome. This dataset contains three such columns, and one of them is an exact copy of the label. A study that does not control for this cannot distinguish learning from lookup.
+There is a well-documented hazard in answering this with machine learning on small clinical datasets, and it is not hypothetical for this data. A structured survey of prior studies on this dataset and its parent release (`reports/tables/table_26_prior_work.csv`; 13 studies, 3 independently verified so far, the coding of the remainder attributed to the comparison table of Kabir et al. [11] pending hand verification) finds 2 of the 3 independently verified headline metrics at or above 99% accuracy - 99.16% [12], and 99.5% with cross-dataset validation reaching 100% [13]; the third is an external sensitivity from the one genuinely external study [11] - with 9 of 13 studies coded as using serum creatinine or eGFR as inputs, and exactly 1 with a validation cohort that is genuinely external. Such results are rarely evidence of clinical usefulness; far more often they indicate that a predictor encodes the outcome. This dataset contains three such columns, and one of them is an exact copy of the label. A study that does not control for this cannot distinguish learning from lookup.
+
+A further hazard is specific to this dataset's published record: 3 of the surveyed studies validate models across the 2015 UCI release and this file (its 2020 re-release) as if they were independent cohorts, and one merges them into a single training set. The provenance analysis in `reports/external/provenance_report.md` shows the two releases share their patients record-for-record, so those validations were performed on the training population - a point developed in the discussion.
 
 This work therefore treats leakage control, honest validation and calibration as the primary objects of study, and treats predictive performance as something to be measured carefully rather than maximised. Reporting follows the spirit of TRIPOD+AI [3].
 
@@ -539,8 +541,11 @@ What this study supports is a methodological claim: leakage-controlled validatio
 8. Vickers AJ, Elkin EB. Decision curve analysis: a novel method for evaluating prediction models. *Med Decis Making*. 2006;26(6):565-574. doi:[10.1177/0272989X06295361](https://doi.org/10.1177/0272989X06295361)
 9. Lundberg SM, Lee S-I. A unified approach to interpreting model predictions. In: *Advances in Neural Information Processing Systems 30 (NeurIPS 2017)*. 2017:4765-4774. arXiv:[1705.07874](https://arxiv.org/abs/1705.07874)
 10. Nori H, Jenkins S, Koch P, Caruana R. InterpretML: a unified framework for machine learning interpretability. 2019. arXiv:[1909.09223](https://arxiv.org/abs/1909.09223)
+11. Kabir MA, Munira S, Azad DT, Ikram SM, Sarker MHR, Hanifi SMA. Community-based early-stage chronic kidney disease screening using explainable machine learning for low-resource settings. *Int J Med Inform*. 2026. arXiv:[2601.01119](https://arxiv.org/abs/2601.01119)
+12. Islam MA, Majumder MZH, Hussein MA. Chronic kidney disease prediction based on machine learning algorithms. *J Pathol Inform*. 2023;14:100189. doi:[10.1016/j.jpi.2023.100189](https://doi.org/10.1016/j.jpi.2023.100189)
+13. Hossain MF, Diya ST, Khan R. ACD-ML: Advanced CKD detection using machine learning: a tri-phase ensemble and multi-layered stacking and blending approach. *Comput Methods Programs Biomed Update*. 2025;7:100173. doi:[10.1016/j.cmpbup.2024.100173](https://doi.org/10.1016/j.cmpbup.2024.100173)
 
-*No reference above was generated without verification; each has a DOI or a stable arXiv identifier.*
+*No reference above was generated without verification; each has a DOI or a stable arXiv identifier. The prior-work survey table additionally distinguishes, per study, which facts were verified from full text or abstract and which are attributed to the comparison table of [11] pending hand verification.*
 
 ## Appendix A. Generated artefacts
 
@@ -597,3 +602,5 @@ What this study supports is a methodological claim: leakage-controlled validatio
 - `table_24_provenance.csv`
 - `table_24_provenance_agreement.csv`
 - `table_24_provenance_evidence.csv`
+- `table_26_prior_work.csv`
+- `table_26_prior_work_summary.csv`
