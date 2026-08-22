@@ -4,6 +4,55 @@ Newest entries at the top. One entry per work session / phase milestone.
 
 ---
 
+## 2026-08-22 — Phase 2 COMPLETE: the paper is now a three-mechanisms methods paper
+
+Commit `07713b8`. Full suite **324 passed**.
+
+**Title:** *"Three mechanisms inflate reported performance on a widely used
+public CKD benchmark — a leakage-controlled, case-mix-aware re-analysis."*
+Chosen without waiting on the user (they were away); trivially changeable,
+since the title is a single line in `06_write_report.py`.
+
+**What changed.** The thesis went from two mechanisms to three once Phase 0's
+provenance result was folded in as a finding rather than a blocker:
+
+1. Target leakage (visible in the column list)
+2. Case mix (requires looking at who is in the sample) — still the largest
+3. Pseudo-external validation (requires comparing two datasets nobody
+   suspected were one) — **new §5.14**
+
+The Discussion now orders them by how easy each is to miss, which is the
+argument that makes the paper a contribution rather than a complaint.
+
+**Framing removals.** Screening/Bangladesh framing is gone from every claim.
+§3.1 now reports the documented provenance *and* states the contradiction,
+telling readers to treat site/country/year as unverified. Limitation 2 is
+rewritten to "no external validation **and none obtainable from the obvious
+source**" — enforced by the gate, not merely asserted.
+
+**Framing is now test-enforced.** `TestReframedFraming` (5 tests): title
+carries the thesis; all three mechanisms have result sections; §3.1 states
+the contradiction; no unqualified "screening performance" claim survives
+(sentence-level check, after a first window-based version produced a false
+positive on a correctly-qualified sentence); "Bangladesh" may appear only in
+provenance context.
+
+**Also delivered:** `REVIEWER_RESPONSE.md` — 17 objections mapped to
+artifacts, with four rows honestly marked Open or Blocked rather than
+claimed as fixed.
+
+**Note on #4 (the literature table):** 3 of 13 studies independently
+verified; 10 flagged `todo_hand_check` because Wiley/ScienceDirect/BSPC
+paywalls blocked automated verification. The Introduction states the split
+rather than implying full verification. This needs institutional access or
+a hand pass.
+
+**Next:** Phase 3 is gated only on the icddr,b request for 3e; 3b′ (the
+dataset-parameterized refactor) and 3d (continuous-value recovery, now a
+same-cohort comparison) can start immediately.
+
+---
+
 ## 2026-08-22 — Phase 1 COMPLETE (1a–1e). Two new substantive findings.
 
 Commits `2b93315` (1a), `56872c1` (1b), `45e8f10`+`b883aec` (1e),
