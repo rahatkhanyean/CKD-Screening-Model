@@ -1,5 +1,22 @@
 # PLAN — From feasibility study to cautionary methods paper
 
+> **PHASE 0 OUTCOME (2026-08-22), amending Phase 3 below.** The provenance
+> gate produced a decisive result: `uci2015` is **SAME-SOURCE** — all 200
+> internal patients pin into its 400 records (match 1.000, null
+> 0.003 ± 0.003; 187 unique pins; 0 contradictions on 10 held-out
+> categoricals). The internal "Bangladesh" v2 file is a discretised subset
+> re-release of UCI-2015 (India). Therefore: **3a/3b/3c lose uci2015 as an
+> external dataset** (the gate test blocks it); **3d becomes a same-cohort
+> continuous-value recovery and binned-vs-continuous comparison** (stronger
+> than planned — no population shift); the INDEPENDENT external candidates
+> are th_uae (task-shifted, sensitivity-only), birdem (thin overlap,
+> grouped CV), mimic_iv_demo (stress test), and icddrb_kabir
+> (pending data — now the only route to a genuine external validation,
+> raising the priority of the data request to icddr,b). A new paper-level
+> finding enters Phase 2: published UCI-2015 ↔ "UCI-2023" cross-dataset
+> validations evaluated on the same patients. Evidence:
+> `reports/external/provenance_report.md`, tables 24/24e/24a.
+
 **Working thesis of the reframed paper:** two independent mechanisms — target
 leakage and case-mix spectrum bias — both push measured performance toward 1.0
 on a widely-used public CKD benchmark, and the second matters more. The

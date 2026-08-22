@@ -1,0 +1,11 @@
+dataset_id,n_unique_pins,variable,n_pairs_compared,n_candidate_missing,n_contradictions,observed_mapping
+uci2015,187,rbc,120,67,0,0<->normal (n=98); 1<->abnormal (n=22)
+uci2015,187,pc,159,28,0,0<->normal (n=117); 1<->abnormal (n=42)
+uci2015,187,pcc,184,3,0,0<->notpresent (n=160); 1<->present (n=24)
+uci2015,187,ba,184,3,0,0<->notpresent (n=173); 1<->present (n=11)
+uci2015,187,htn,186,1,0,0<->no (n=113); 1<->yes (n=73)
+uci2015,187,dm,186,1,0,0<->no (n=120); 1<->yes (n=66)
+uci2015,187,cad,186,1,0,0<->no (n=165); 1<->yes (n=21)
+uci2015,187,appet,186,1,0,0<->good (n=149); 1<->poor (n=37)
+uci2015,187,pe,186,1,0,0<->no (n=151); 1<->yes (n=35)
+uci2015,187,ane,186,1,0,0<->no (n=156); 1<->yes (n=30)

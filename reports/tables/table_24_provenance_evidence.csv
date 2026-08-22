@@ -1,0 +1,14 @@
+dataset_id,variable,n_finite_edges,edges_matching_observed_values,edges_matching_deciles
+uci2015,age,9,9,2
+uci2015,sg,8,1,3
+uci2015,al,5,5,4
+uci2015,su,5,5,2
+uci2015,bgr,9,3,0
+uci2015,bu,8,0,0
+uci2015,sc,7,1,0
+uci2015,sod,9,4,2
+uci2015,pot,4,0,0
+uci2015,hemo,9,8,1
+uci2015,pcv,9,0,0
+uci2015,wbcc,9,0,0
+uci2015,rbcc,9,0,0

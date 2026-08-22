@@ -1,0 +1,243 @@
+# ---------------------------------------------------------------------------
+# External-dataset registry (Phase 0.2)
+# ---------------------------------------------------------------------------
+# One entry per candidate external dataset. This file is DATA; the logic that
+# reads and enforces it lives in src/ckd/data/external.py.
+#
+# Fields
+# ------
+# citation / doi / url / license : provenance of the source.
+# country, design                : what kind of cohort this actually is.
+#     design is one of:
+#       cross-sectional-diagnostic  outcome is prevalent disease at sampling
+#       prospective-incident        outcome is disease developing later
+#       longitudinal-repeated       repeated rows per subject over time
+#       ehr-extract                 features/label must be derived by an ETL
+# status : OBTAINED (raw files on disk, checksummed below) or
+#          RESTRICTED (cannot be downloaded; acquisition_note says how to ask).
+# raw_files : path (project-relative) + sha256 for every obtained file.
+# outcome_columns / post_diagnosis_columns : this source's equivalents of our
+#     class/affected and stage/grf. Their union is the prohibited set handed
+#     to LeakageGuard for any pipeline built on this source. The special name
+#     "ckd_label" is the REQUIRED name for any label a Phase-3 ETL derives
+#     (mimic_iv_demo), so the guard can be declared before the ETL exists.
+# identifier_columns : row identifiers; never predictors, never "leakage"
+#     in the outcome sense, but must be dropped before modelling.
+# grouped_split_by : if set, any resampling of this source MUST group rows by
+#     this column (repeated-measures identity leakage otherwise).
+# expected : cohort arithmetic used by tests and by the provenance report.
+#     Values below were verified against the files on disk on 2026-08-22.
+# notes : caveats that must appear wherever the dataset is used.
+# ---------------------------------------------------------------------------
+
+datasets:
+  uci2015:
+    citation: >-
+      Rubini L, Soundarapandian P, Eswaran P. Chronic Kidney Disease
+      [dataset]. UCI Machine Learning Repository; 2015.
+    doi: 10.24432/C5G020
+    url: https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease
+    license: CC BY 4.0
+    country: India (Apollo Hospitals; per dataset documentation)
+    design: cross-sectional-diagnostic
+    status: OBTAINED
+    raw_files:
+      - path: data/external/uci2015/raw/data.csv
+        sha256: 0eeea8d17f5ad8792d854999d6ddf1602ec4e116616f6ccdfdaef0ba8109e694
+      - path: data/external/uci2015/raw/chronic_kidney_disease.zip
+        sha256: 3f0d0e5bab0f453165acfa2c77eae695393089c5b338cb4cd98339c96a26a585
+    outcome_columns: [class]
+    post_diagnosis_columns: []
+    identifier_columns: []
+    grouped_split_by: null
+    expected:
+      n_rows: 400
+      n_positive: 250          # 248 clean 'ckd' + 2 'ckd\t' (trailing tab)
+      n_negative: 150
+      n_columns: 25
+    notes: >-
+      CONTINUOUS values (the property our v2 file lost to pre-discretisation).
+      Known label defect: 2 records carry 'ckd' with a trailing tab; the
+      loader strips label whitespace and reports the defect rather than
+      silently ignoring it. 24 of 25 column names are shared verbatim with
+      our internal file ('bp' differs: continuous diastolic mmHg here vs a
+      binary flag plus 'bp limit' in v2).
+      PHASE 0.3 VERDICT (2026-08-22): SAME-SOURCE. Interval-containment
+      matching pinned all 200 internal patients into these 400 records
+      (match fraction 1.000, permutation null 0.003 +/- 0.003), 187 of them
+      uniquely, with ZERO contradictions across 10 held-out categorical
+      variables (~1,500 agreement opportunities). The internal v2 file is a
+      discretised subset re-release of this dataset; its documented
+      Bangladesh provenance is inconsistent with the record-level identity.
+      CONSEQUENCES: (a) may NEVER be used for external validation - the
+      gate test enforces this; (b) becomes the vehicle for deterministic
+      continuous-value RECOVERY for the internal cohort (Phase 3d turns
+      into a same-cohort binned-vs-continuous comparison, free of
+      population-shift confounds); (c) published UCI-2015 <-> "UCI-2023"
+      cross-dataset validations were evaluating on the same patients -
+      a finding for the reframed paper in its own right.
+
+  uci2023_v2:
+    citation: >-
+      Islam MA, Akter S. Risk Factor Prediction of Chronic Kidney Disease
+      [dataset]. UCI Machine Learning Repository; 2020.
+    doi: 10.24432/C5WP64
+    url: https://archive.ics.uci.edu/dataset/857/risk+factor+prediction+of+chronic+kidney+disease
+    license: CC BY 4.0
+    country: Bangladesh (Enam Medical College, Savar)
+    design: cross-sectional-diagnostic
+    status: OBTAINED
+    raw_files:
+      - path: data/raw/ckd-dataset-v2.csv
+        sha256: f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a
+    outcome_columns: [class, affected]
+    post_diagnosis_columns: [stage, grf]
+    identifier_columns: []
+    grouped_split_by: null
+    expected:
+      n_rows: 200
+      n_positive: 128
+      n_negative: 72
+      n_columns: 29
+    notes: >-
+      DELIBERATE NEGATIVE CONTROL for the provenance gate. This is the
+      dataset the whole internal study analyses, registered here because the
+      literature cites it as "UCI-2023" as if it were a distinct cohort
+      (e.g. Kabir et al. 2026, arXiv:2601.01119, describes it with exactly
+      our n, class balance and site). The provenance check must classify it
+      SAME-SOURCE, and the gate test must prove that a SAME-SOURCE dataset
+      can never appear in an external-validation table.
+
+  icddrb_kabir:
+    citation: >-
+      Kabir MA, Munira S, Azad DT, Ikram SM, Sarker MHR, Hanifi SMA.
+      Community-Based Early-Stage Chronic Kidney Disease Screening using
+      Explainable Machine Learning for Low-Resource Settings. Int J Med
+      Inform (2026). arXiv:2601.01119. Cohort: Sarker et al., Ther Adv
+      Chronic Dis 2021 (doi:10.1177/20406223211035281), Mirzapur DSS,
+      Tangail ("TangailBD").
+    doi: 10.48550/arXiv.2601.01119
+    url: https://arxiv.org/abs/2601.01119
+    license: restricted (icddr,b ethics; not redistributable)
+    country: Bangladesh (Mirzapur sub-district, Tangail; community-based)
+    design: cross-sectional-diagnostic
+    status: RESTRICTED
+    acquisition_note: >-
+      Not publicly available (icddr,b Research Review Committee registration
+      no. 19081). Paper's data availability statement directs requests to
+      habibur.rahman@icddrb.org. USER ACTION: request access; until granted,
+      Phase 3e (the case-mix re-test) is blocked-on-data and the spectrum
+      prediction stands as a registered claim, not a result.
+    raw_files: []
+    outcome_columns: [ckd_label]
+    post_diagnosis_columns: []
+    identifier_columns: []
+    grouped_split_by: null
+    expected:
+      n_rows: 284
+      n_positive: 112          # s1=25, s2=51, s3=36 -> 68% of cases early-stage
+      n_negative: 172
+      n_columns: 25            # 24 features + outcome, per Table 2 of the paper
+    notes: >-
+      The single most valuable candidate: a genuine community screening
+      series (age-stratified random sampling, eGFR + ACR, chronicity
+      confirmed at 3 months) enriched for exactly the early-stage cases our
+      spectrum analysis says the internal sample lacks. All expected values
+      are from the paper, not from data we hold.
+
+  th_uae:
+    citation: >-
+      Al-Shamsi S, Regmi D, Govender RD. Chronic kidney disease in patients
+      at high risk of cardiovascular disease in the United Arab Emirates: A
+      population-based study. PLOS ONE. 2018;13(6):e0199920.
+    doi: 10.1371/journal.pone.0199920
+    url: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0199920
+    license: CC BY 4.0
+    country: United Arab Emirates (Tawam Hospital, Al-Ain)
+    design: prospective-incident
+    status: OBTAINED
+    raw_files:
+      - path: data/external/th_uae/raw/pone.0199920.s002.xlsx
+        sha256: cdc0e0092934f73d1ab692a6f83b379c64943b4e0e76f8198d12aabdb1b76c58
+    outcome_columns: [EventCKD35]
+    post_diagnosis_columns: [TimeToEventMonths]
+    identifier_columns: [StudyID]
+    grouped_split_by: null
+    expected:
+      n_rows: 491
+      n_positive: 56           # incident CKD stage 3-5 during follow-up
+      n_negative: 435
+      n_columns: 25
+    notes: >-
+      TASK SHIFT, stated wherever used: the outcome is INCIDENT CKD stage
+      3-5 during follow-up, not prevalent CKD at sampling. Baseline
+      CreatnineBaseline/eGFRBaseline are temporally legitimate predictors
+      here (measured before the outcome), unlike our grf. The 435 non-events
+      were not verified free of early-stage CKD cross-sectionally, so
+      negatives are unreliable for a diagnostic contrast; the honest usage
+      (as in Kabir et al.) is sensitivity-only on the 56 confirmed cases.
+
+  birdem:
+    citation: >-
+      Anan A, Arshi UT, Karim S, Hasan MK, Rahman MM, Taher T, Islam RN. A
+      dataset of demographic and lifestyle risk factors for assessing
+      chronic kidney disease development in diabetic patients. Data in
+      Brief. 2025. Data: Mendeley Data, doi:10.17632/hjkzgbxgv5.2 (v2).
+    doi: 10.1016/j.dib.2025.112414
+    url: https://data.mendeley.com/datasets/hjkzgbxgv5/2
+    license: CC BY 4.0
+    country: Bangladesh (BIRDEM General Hospital, Dhaka; diabetic patients)
+    design: longitudinal-repeated
+    status: OBTAINED
+    raw_files:
+      - path: data/external/birdem/raw/DiabeticCKD_dataset.csv
+        sha256: 9cef0eb4cd3279c36f9b4816c6a2ccfd480345ee3a57e2dc5c9f722e92793618
+    outcome_columns: ["CKD (1-yes, 0-no)"]
+    post_diagnosis_columns: []
+    identifier_columns: ["Patient ID"]
+    grouped_split_by: "Patient ID"
+    expected:
+      n_rows: 4000             # 400 patients x 10 yearly rows
+      n_patients: 400
+      n_positive: 185          # PATIENT-level (ever-CKD); row-level is 386
+      n_negative: 215
+      n_columns: 26
+    notes: >-
+      Two hard constraints. (1) LONGITUDINAL: 4,000 rows for 400 patients;
+      any split that does not group by Patient ID leaks identity across
+      folds. (2) The label varies within patient over time (386 CKD rows vs
+      185 ever-CKD patients): the label is incident, and the analysis must
+      state whether it predicts ever-CKD from baseline or CKD-at-year-t.
+      All patients are diabetic (dm constant) and there are no laboratory
+      or dipstick variables, so harmonized overlap with our schema is thin.
+      Sensitivity analysis only, per plan.
+
+  mimic_iv_demo:
+    citation: >-
+      Johnson A, Bulgarelli L, Pollard T, Celi LA, Mark R, Horng S. MIMIC-IV
+      Clinical Database Demo (version 2.2). PhysioNet; 2023.
+    doi: 10.13026/dp1f-ex47
+    url: https://physionet.org/content/mimic-iv-demo/2.2/
+    license: Open Data Commons Open Database License v1.0
+    country: USA (Beth Israel Deaconess Medical Center, Boston; ICU/hospital)
+    design: ehr-extract
+    status: OBTAINED
+    raw_files:
+      - path: data/external/mimic_iv_demo/raw/mimic-iv-clinical-database-demo-2.2.zip
+        sha256: 97301a03820e8f41af211cf3462ddc19aefe75bbed05f11753859affaafeb8ec
+    outcome_columns: [ckd_label]     # to be DERIVED (ICD-10 N18.*) by the
+                                     # Phase-3 ETL; the name is reserved here
+                                     # so the guard exists before the ETL does
+    post_diagnosis_columns: []
+    identifier_columns: [subject_id, hadm_id, stay_id]
+    grouped_split_by: subject_id
+    expected:
+      n_rows: 100              # subjects in the demo, per PhysioNet
+      n_columns: null          # relational extract; no single table
+    notes: >-
+      Distribution stress-test appendix only, per plan. All 34 archive files
+      verified against the archive's own SHA256SUMS (0 mismatches,
+      2026-08-22). Any label derived from diagnosis codes is by construction
+      post-diagnosis; the ETL must therefore restrict features to values
+      timestamped before the first CKD code, and the derived label column
+      must be named ckd_label so this registry's prohibited set covers it.

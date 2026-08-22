@@ -4,6 +4,71 @@ Newest entries at the top. One entry per work session / phase milestone.
 
 ---
 
+## 2026-08-22 — Phase 0 COMPLETE. Provenance gate verdict: the benchmark's "two datasets" are one
+
+**The finding.** `scripts/00_provenance.py` (new stage, gated by
+`tests/test_external.py::TestProvenanceGate`) classified `uci2015` as
+**SAME-SOURCE** with the internal file:
+
+- Interval-containment matching (13 shared variables, outcome required to
+  match, missing = compatible): **maximum bipartite match fraction 1.000**
+  — every one of our 200 patients fits inside the 400 UCI-2015 records —
+  against a 50-shuffle permutation null of **0.003 ± 0.003 (max 0.015)**.
+- **187 of 200 patients pin to exactly one** UCI-2015 record (max 2
+  partners anywhere).
+- Held-out confirmation: across those 187 pairs, **10 categorical
+  variables that played no part in the matching agree with 0
+  contradictions** (~1,500 opportunities): rbc/pc 1↔abnormal,
+  pcc/ba 1↔present, htn/dm/cad/pe/ane 1↔yes, appet 1↔poor.
+- `uci2023_v2` (the registry's negative control): byte-identical,
+  SAME-SOURCE, caught as designed.
+
+**What this means.** The v2 file — documented by UCI as collected at Enam
+Medical College, Bangladesh, 2020 — is at record level a discretised subset
+re-release of the 2015 Apollo Hospitals (India) dataset. Consequences:
+
+1. **uci2015 can never serve as external validation** for this study; the
+   gate test now enforces that mechanically (any external table naming a
+   non-INDEPENDENT dataset fails CI).
+2. **Published cross-dataset validations between UCI-2015 and "UCI-2023"**
+   (at least refs [49][50][51] in Kabir et al., and Kabir et al.'s own
+   external validation) **evaluated on the same patients.** Pseudo-external
+   validation joins target leakage and case-mix as a third inflation
+   mechanism for the reframed paper — likely headline material.
+3. **Phase 3d improves**: the unique pins allow deterministic recovery of
+   continuous values for 187+ internal patients, so binned-vs-continuous
+   becomes a same-cohort comparison with no population-shift confound.
+4. **Genuine external validation now rests on icddr,b** (TangailBD) —
+   the data request (habibur.rahman@icddrb.org) is the program's single
+   most valuable outstanding item.
+5. Two documented variable uncertainties are resolved empirically (`appet`
+   1 = poor; urine flags 1 = abnormal/present), and a new data-quality
+   defect surfaced: **v2 coded UCI-2015 missing values as 0** (e.g. 67
+   missing `rbc` → 0), i.e. silent missing-as-normal imputation in the
+   released file — this plausibly explains `ba`'s near-constancy and must
+   be reported wherever those variables are interpreted (feeds Phase 1/2).
+
+**Caveat recorded with the claim.** "SAME-SOURCE" is a statement about
+record-level identity, not about who mislabelled what; the report presents
+the evidence and the inconsistency with the documented provenance without
+attributing intent.
+
+**Artifacts.** `reports/external/provenance_report.md`;
+`reports/tables/table_24_provenance{,_evidence,_agreement}.csv`;
+verdict rule fixed in `src/ckd/data/provenance.py::classify` before any
+external result existed.
+
+**New code + tests.** `src/ckd/data/external.py` (registry, checksums,
+loaders, per-source prohibited sets, dataset seeds),
+`src/ckd/data/provenance.py` (containment, null calibration, forensics,
+held-out agreement), `scripts/00_provenance.py`,
+`config/external_datasets.yaml`, `tests/test_external.py` (35),
+`tests/test_provenance.py` (14). **Full suite: 276 passed** (was 227).
+openpyxl==3.1.5 added to the environment for the TH xlsx (to be added to
+requirements.txt in the Phase-1 commit that touches it).
+
+---
+
 ## 2026-08-22 — Phase 0.2: external-dataset acquisition and a decisive literature find
 
 **The decisive find.** Kabir et al. 2026, *"Community-Based Early-Stage
