@@ -14,3 +14,7 @@ paper/b1.log
 paper/b2.log
 paper/build1.log
 paper/build2.log
+
+# Empty leftover repo present before this project was initialised.
+# Untracked, not deleted - see WORKLOG.
+CKD Screening Model/
