@@ -1,0 +1,21 @@
+MIMIC-IV demo extraction notes
+==================================
+
+  - label from ICD-10 N18* / ICD-9 585*: 26 of 100 subjects coded CKD
+  - stage recoverable for 11 of 26 CKD subjects (remainder coded N18.9 'unspecified')
+  - temporal guard: dropped 8754 laboratory values not strictly preceding the admission at which CKD was first coded
+  - 6 subject(s) have no eligible measurement after the temporal guard and are reported, not imputed
+
+Stage distribution among coded CKD subjects:
+  unspecified / not CKD    89
+  s3                       6
+  s5                       3
+  s4                       2
+
+Interpretation limits, stated because they bound every downstream claim:
+  * The label is administrative coding, not chart review or a KDIGO
+    determination; no chronicity criterion is verified.
+  * The cohort is a critical-care demo extract of 100 subjects, so it is
+    neither a screening series nor a general hospital population.
+  * Coverage of the urine dipstick tier is partial, which restricts
+    external validation to the shared blood panel plus specific gravity.

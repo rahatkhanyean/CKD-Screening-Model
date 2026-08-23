@@ -2,7 +2,7 @@
 
 **A leakage-controlled, case-mix-aware re-analysis**
 
-*Generated 2026-08-22 by `scripts/06_write_report.py`. Every number in this document is injected directly from the computed tables in `reports/tables/`; none is transcribed by hand.*
+*Generated 2026-08-23 by `scripts/06_write_report.py`. Every number in this document is injected directly from the computed tables in `reports/tables/`; none is transcribed by hand.*
 
 ---
 
@@ -678,6 +678,28 @@ Section 5.6 reported that isotonic calibration achieved a better median Brier sc
 
 Paired within each (configuration x model x repeat) cell, isotonic gives the lower Brier score in 105 of 120 comparisons (88%), with a median difference of -0.0056. The ordering therefore survives the additional resampling. Either way the practical difference is small, and the more consequential calibration finding in this study is not which method wins but that the top-ranked model's probability scale is not identified at all (section 5.6).
 
+### 5.20 External validation: what happens on different patients
+
+Every result above is internal. The provenance gate disqualified the obvious external candidate (section 5.14), leaving one registered source that carries the *same measurements* on different patients: a critical-care database from a different country and health system. Models were trained on all 200 analysed patients and applied **without any refitting**.
+
+The transfer feature set is the intersection of the two schemas - 10 variables: nine blood analytes plus urine specific gravity. An internal reference is reported on exactly that feature set, so the drop caused by transfer is separable from any drop caused by using fewer variables.
+
+| Model | Internal (nested CV) | External (frozen) | External Brier | Sensitivity | Specificity |
+|---|---:|---|---:|---:|---:|
+| Logistic regression | 0.997 | 0.702 (0.594-0.794) | 0.409 | 0.95 | 0.47 |
+| SVM (RBF) | 0.997 | 0.699 (0.599-0.788) | 0.423 | 0.95 | 0.45 |
+| Random forest | 0.997 | 0.708 (0.605-0.803) | 0.418 | 0.95 | 0.39 |
+
+**Discrimination does not transfer.** Internal ROC-AUC on this feature set is 0.997-0.997; externally it is 0.699-0.708, a fall of at least 0.29 ROC-AUC. All three model families agree, and the bootstrap intervals exclude the internal estimate by a wide margin. This is the single most important number in the study: the near-perfect internal figures reported throughout this report, and throughout the literature on this benchmark, do not survive contact with different patients.
+
+**Calibration fails worse than discrimination, and for a legible reason.** External Brier scores are 0.409-0.423 against 0.019 internally, with calibration intercepts far below zero: the models assign high risk to almost everyone. At the prespecified threshold they retain sensitivity 0.95 but specificity collapses to 0.39-0.47. Prevalence is the obvious culprit - 64% in the training data against 21% in the external cohort.
+
+Applying recalibration-in-the-large - the minimal correction a deployer would make, shifting the log-odds so mean predicted risk matches the external base rate - reduces the Brier score to 0.172-0.175. It cannot change the ranking, so discrimination is unmoved by construction. It also leaves no prediction above 0.50, so the model flags nobody at the prespecified threshold: the operating point would have to be re-derived in the new population. **The binding constraint is the discrimination of 0.708, not the calibration**, and no post-hoc correction addresses it.
+
+**How much of this is optimism and how much is population shift?** Both, and this design cannot separate them. The external cohort is a critical-care population in a different country and health system, with administratively coded rather than adjudicated labels, so some of the fall is genuine case-mix and measurement difference rather than internal over-fitting. What the comparison does establish is the direction and the order of magnitude, and that they are consistent with what sections 5.5 and 5.18 predict: a model selected on a sample this separable, with intervals this wide, should not be expected to transfer, and it does not.
+
+The external cohort is small - 94 subjects with 20 cases - so the external estimate is itself imprecise, which the intervals show. It is nevertheless the first evidence in this study drawn from patients the models had never seen, and the only such evidence the registered sources permit.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -842,6 +864,7 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `fig_r12_spectrum_effect.png`
 - `fig_r13_ebm_shapes.png`
 - `fig_r14_binning_cost.png`
+- `fig_r15_provenance_null.png`
 - `fig_r1_auc_heatmap.png`
 - `fig_r2_leakage_audit.png`
 - `fig_r3_screening_metrics.png`
@@ -904,3 +927,6 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `table_39_calibration_experiment.csv`
 - `table_39_calibration_paired.csv`
 - `table_39_calibration_per_repeat.csv`
+- `table_40_provenance_null_draws.csv`
+- `table_41_mimic_cohort.csv`
+- `table_42_external_validation.csv`

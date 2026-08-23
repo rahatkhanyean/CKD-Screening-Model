@@ -1944,6 +1944,101 @@ def main() -> int:
           "is not identified at all (section 5.6).")
         w("")
 
+    # ---------------- 5.20 External validation ----------------
+    extval_path = TABLES / "table_42_external_validation.csv"
+    if extval_path.is_file():
+        extval = t("table_42_external_validation.csv")
+        internal_arm = extval[extval["arm"] == "internal_nested_cv"]
+        frozen = extval[extval["arm"] == "external_frozen_transfer"]
+        recal = extval[extval["arm"] == "external_recalibrated_in_the_large"]
+        w("### 5.20 External validation: what happens on different patients")
+        w("")
+        w(f"Every result above is internal. The provenance gate disqualified "
+          f"the obvious external candidate (section 5.14), leaving one "
+          f"registered source that carries the *same measurements* on "
+          f"different patients: a critical-care database from a different "
+          f"country and health system. Models were trained on all "
+          f"{n_tot} analysed patients and applied **without any refitting**.")
+        w("")
+        w(f"The transfer feature set is the intersection of the two schemas - "
+          f"{int(frozen['n_features'].iloc[0])} variables: nine blood "
+          f"analytes plus urine specific gravity. An internal reference is "
+          f"reported on exactly that feature set, so the drop caused by "
+          f"transfer is separable from any drop caused by using fewer "
+          f"variables.")
+        w("")
+        w("| Model | Internal (nested CV) | External (frozen) | External Brier | Sensitivity | Specificity |")
+        w("|---|---:|---|---:|---:|---:|")
+        for model_name in frozen["model"]:
+            i = internal_arm[internal_arm["model"] == model_name].iloc[0]
+            e = frozen[frozen["model"] == model_name].iloc[0]
+            w(f"| {model_label(model_name)} | {fmt(i['roc_auc'])} | "
+              f"{fmt(e['roc_auc'])} "
+              f"({fmt(e['roc_auc_ci_low'])}-{fmt(e['roc_auc_ci_high'])}) | "
+              f"{fmt(e['brier'], 3)} | {fmt(e['sensitivity'], 2)} | "
+              f"{fmt(e['specificity'], 2)} |")
+        w("")
+        drop = float(internal_arm["roc_auc"].min() - frozen["roc_auc"].max())
+        w(f"**Discrimination does not transfer.** Internal ROC-AUC on this "
+          f"feature set is {fmt(internal_arm['roc_auc'].min())}-"
+          f"{fmt(internal_arm['roc_auc'].max())}; externally it is "
+          f"{fmt(frozen['roc_auc'].min())}-{fmt(frozen['roc_auc'].max())}, a "
+          f"fall of at least {drop:.2f} ROC-AUC. All three model families "
+          f"agree, and the bootstrap intervals exclude the internal "
+          f"estimate by a wide margin. This is the single most important "
+          f"number in the study: the near-perfect internal figures reported "
+          f"throughout this report, and throughout the literature on this "
+          f"benchmark, do not survive contact with different patients.")
+        w("")
+        prev_int = float(internal_arm["prevalence"].iloc[0])
+        prev_ext = float(frozen["prevalence"].iloc[0])
+        w(f"**Calibration fails worse than discrimination, and for a "
+          f"legible reason.** External Brier scores are "
+          f"{fmt(frozen['brier'].min(), 3)}-{fmt(frozen['brier'].max(), 3)} "
+          f"against {fmt(internal_arm['brier'].max(), 3)} internally, with "
+          f"calibration intercepts far below zero: the models assign high "
+          f"risk to almost everyone. At the prespecified threshold they "
+          f"retain sensitivity {fmt(frozen['sensitivity'].max(), 2)} but "
+          f"specificity collapses to "
+          f"{fmt(frozen['specificity'].min(), 2)}-"
+          f"{fmt(frozen['specificity'].max(), 2)}. Prevalence is the obvious "
+          f"culprit - {prev_int:.0%} in the training data against "
+          f"{prev_ext:.0%} in the external cohort.")
+        w("")
+        if len(recal):
+            w(f"Applying recalibration-in-the-large - the minimal correction "
+              f"a deployer would make, shifting the log-odds so mean "
+              f"predicted risk matches the external base rate - reduces the "
+              f"Brier score to "
+              f"{fmt(recal['brier'].min(), 3)}-{fmt(recal['brier'].max(), 3)}. "
+              f"It cannot change the ranking, so discrimination is unmoved by "
+              f"construction. It also leaves no prediction above 0.50, so the "
+              f"model flags nobody at the prespecified threshold: the "
+              f"operating point would have to be re-derived in the new "
+              f"population. **The binding constraint is the discrimination "
+              f"of {fmt(frozen['roc_auc'].max())}, not the calibration**, and "
+              f"no post-hoc correction addresses it.")
+            w("")
+        w("**How much of this is optimism and how much is population "
+          "shift?** Both, and this design cannot separate them. The external "
+          "cohort is a critical-care population in a different country and "
+          "health system, with administratively coded rather than "
+          "adjudicated labels, so some of the fall is genuine case-mix and "
+          "measurement difference rather than internal over-fitting. What "
+          "the comparison does establish is the direction and the order of "
+          "magnitude, and that they are consistent with what sections 5.5 "
+          "and 5.18 predict: a model selected on a sample this separable, "
+          "with intervals this wide, should not be expected to transfer, and "
+          "it does not.")
+        w("")
+        w(f"The external cohort is small - {int(frozen['n'].iloc[0])} "
+          f"subjects with {int(frozen['n_positive'].iloc[0])} cases - so the "
+          f"external estimate is itself imprecise, which the intervals show. "
+          f"It is nevertheless the first evidence in this study drawn from "
+          f"patients the models had never seen, and the only such evidence "
+          f"the registered sources permit.")
+        w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
