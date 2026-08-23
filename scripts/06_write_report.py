@@ -2128,26 +2128,41 @@ def main() -> int:
         w("")
         auc_max = float(bid_std["standardisation_shift"].abs().max())
         sens_max = float(bid_std["sensitivity_standardisation_shift"].abs().max())
+        early = spectrum[
+            (spectrum["subgroup"] == "early_ckd_only")
+            & (spectrum["config"] == "low_cost_model")
+            & (spectrum["model"] != "dummy")
+        ]
+        early_auc = float(early["roc_auc"].max()) if len(early) else float("nan")
         w(f"**This produced a negative result about the diagnostic itself, "
-          f"and it is the most useful thing in the section.** Standardising "
-          f"the *AUC* barely moves it - at most {auc_max:.4f} - so on this "
-          f"evidence it would not flag a benchmark that section 5.5 shows "
-          f"is severely case-mix dependent. The reason is structural: AUC "
-          f"is a rank statistic, and re-weighting which cases are present "
-          f"changes it only insofar as it changes whether cases outrank "
-          f"controls. A model can retain a near-perfect AUC while missing "
-          f"most of the early-stage patients a screening programme exists "
-          f"to find, because those patients still outrank the controls - "
-          f"just by less.")
+          f"which is worth more than a confirmation would have been.** "
+          f"Standardising the *AUC* barely moves it - at most "
+          f"{auc_max:.4f} - so on this evidence it would not flag a "
+          f"benchmark that section 5.5 shows is case-mix dependent at a "
+          f"threshold.")
         w("")
-        w(f"Standardising *sensitivity at a fixed operating point* has no "
-          f"such invariance: a case below the threshold is missed however "
-          f"it ranks. The same re-weighting shifts sensitivity by up to "
-          f"{sens_max:.4f}, an order of magnitude more than the AUC shift, "
-          f"and flags the laboratory configuration. The lesson generalises "
-          f"beyond this dataset: **spectrum effects hide in AUC by "
-          f"construction, and standardising discrimination is not enough - "
-          f"the operating point has to be standardised too.**")
+        w(f"The explanation is specific to this dataset, and stating it "
+          f"precisely matters. AUC is a rank statistic, so re-weighting "
+          f"which cases are present moves it only insofar as it changes "
+          f"whether cases outrank controls. Here even the early-stage "
+          f"cases are well separated - their subgroup ROC-AUC is "
+          f"{fmt(early_auc)} - so shifting weight toward them barely "
+          f"changes any ranking, and the standardised AUC stays high. "
+          f"Sensitivity at a fixed threshold has no such invariance: a case "
+          f"below the threshold is missed however it ranks, and the same "
+          f"re-weighting shifts it by up to {sens_max:.4f}.")
+        w("")
+        w("**This is not evidence that AUC is generally blind to spectrum "
+          "effects.** It plainly is not: a case mix that pushes cases below "
+          "controls moves AUC, which is why spectrum bias is a recognised "
+          "threat to discrimination measures. What this dataset shows is "
+          "narrower and still useful - a sample can be separable enough "
+          "that AUC absorbs a large change in case mix while a "
+          "threshold-based metric does not. The practical consequence is "
+          "that standardising discrimination alone can give false "
+          "reassurance, so an operating-point metric should be "
+          "standardised alongside it. Which of the two moves more will "
+          "depend on the dataset.")
         w("")
         w("Applied here, the protocol raises a flag for every "
           "configuration, which is the correct answer for this benchmark "

@@ -2,7 +2,7 @@
 
 **A leakage-controlled, case-mix-aware re-analysis**
 
-*Generated 2026-08-23 by `scripts/06_write_report.py`. Every number in this document is injected directly from the computed tables in `reports/tables/`; none is transcribed by hand.*
+*Generated 2026-08-24 by `scripts/06_write_report.py`. Every number in this document is injected directly from the computed tables in `reports/tables/`; none is transcribed by hand.*
 
 ---
 
@@ -726,9 +726,11 @@ The laboratory configuration - fourteen variables, a full blood panel and urine 
 | Laboratory | 0.994 | 0.986 | +0.0084 | 0.969 | 0.912 | +0.0563 |
 | Full valid | 1.000 | 1.000 | +0.0000 | 1.000 | 1.000 | +0.0000 |
 
-**This produced a negative result about the diagnostic itself, and it is the most useful thing in the section.** Standardising the *AUC* barely moves it - at most 0.0084 - so on this evidence it would not flag a benchmark that section 5.5 shows is severely case-mix dependent. The reason is structural: AUC is a rank statistic, and re-weighting which cases are present changes it only insofar as it changes whether cases outrank controls. A model can retain a near-perfect AUC while missing most of the early-stage patients a screening programme exists to find, because those patients still outrank the controls - just by less.
+**This produced a negative result about the diagnostic itself, which is worth more than a confirmation would have been.** Standardising the *AUC* barely moves it - at most 0.0084 - so on this evidence it would not flag a benchmark that section 5.5 shows is case-mix dependent at a threshold.
 
-Standardising *sensitivity at a fixed operating point* has no such invariance: a case below the threshold is missed however it ranks. The same re-weighting shifts sensitivity by up to 0.0563, an order of magnitude more than the AUC shift, and flags the laboratory configuration. The lesson generalises beyond this dataset: **spectrum effects hide in AUC by construction, and standardising discrimination is not enough - the operating point has to be standardised too.**
+The explanation is specific to this dataset, and stating it precisely matters. AUC is a rank statistic, so re-weighting which cases are present moves it only insofar as it changes whether cases outrank controls. Here even the early-stage cases are well separated - their subgroup ROC-AUC is 0.983 - so shifting weight toward them barely changes any ranking, and the standardised AUC stays high. Sensitivity at a fixed threshold has no such invariance: a case below the threshold is missed however it ranks, and the same re-weighting shifts it by up to 0.0563.
+
+**This is not evidence that AUC is generally blind to spectrum effects.** It plainly is not: a case mix that pushes cases below controls moves AUC, which is why spectrum bias is a recognised threat to discrimination measures. What this dataset shows is narrower and still useful - a sample can be separable enough that AUC absorbs a large change in case mix while a threshold-based metric does not. The practical consequence is that standardising discrimination alone can give false reassurance, so an operating-point metric should be standardised alongside it. Which of the two moves more will depend on the dataset.
 
 Applied here, the protocol raises a flag for every configuration, which is the correct answer for this benchmark and was reached without reference to any of the three mechanisms that motivated it. Whether the thresholds transfer is an open question; the machinery is released so that others can find out.
 
