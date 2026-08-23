@@ -1,0 +1,4 @@
+config,multivariable_lift,fraction_to_reach_90pct,standardisation_shift,sensitivity_standardisation_shift,low_multivariable_lift,saturated_by_subsample,case_mix_dependent_auc,case_mix_dependent_sensitivity,n_flags_raised
+low_cost_model,0.105,0.1,0.0044,0.0315,False,True,False,False,1
+laboratory_model,0.0257,,0.0084,0.0563,True,,False,True,2
+full_valid_model,0.0317,,0.0,0.0,True,,False,False,1

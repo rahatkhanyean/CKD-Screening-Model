@@ -700,6 +700,38 @@ Applying recalibration-in-the-large - the minimal correction a deployer would ma
 
 The external cohort is small - 94 subjects with 20 cases - so the external estimate is itself imprecise, which the intervals show. It is nevertheless the first evidence in this study drawn from patients the models had never seen, and the only such evidence the registered sources permit.
 
+### 5.21 A diagnostic for benchmark informativeness (PROPOSED)
+
+Each mechanism in this report was invisible in the number the literature reports. That is not an accident of this dataset: discrimination answers *how well did this model separate these patients*, and says nothing about whether the dataset can tell good methods from bad ones. This section proposes three measurements that address the gap, and applies them here. They are offered as a starting point, not a standard: the thresholds come from one benchmark and need calibrating across many.
+
+None of the three components is new in itself - direct standardisation is routine in epidemiology, learning curves are long established, and comparing against a strong single-feature baseline is ordinary practice. What is proposed is their composition into a benchmark-level check that can be run *before* a dataset is trusted.
+
+**1. Multivariable lift.** How much did modelling add over the single most separable column?
+
+| Configuration | Model ROC-AUC | Best single predictor | Its ROC-AUC | Lift (95% CI) |
+|---|---:|---|---:|---|
+| Low-cost | 0.993 | `sg` | 0.888 | +0.1050 (+0.0709, +0.1448) |
+| Laboratory | 0.994 | `hemo` | 0.968 | +0.0257 (+0.0095, +0.0432) |
+| Full valid | 1.000 | `hemo` | 0.968 | +0.0317 (+0.0141, +0.0532) |
+
+The laboratory configuration - fourteen variables, a full blood panel and urine microscopy - improves on `hemo` **alone** by +0.0257 ROC-AUC. The full valid configuration, with 25 variables, adds +0.0317. A benchmark on which the entire modelling exercise is worth three hundredths of an AUC over one raw measurement cannot rank methods, whatever numbers it produces. The low-cost set is the exception (+0.1050), which is the one place in this study where combining variables demonstrably does work.
+
+**2. Saturation.** How much of the training data was needed? Using 10% of each training fold - roughly 16 patients - already reaches ROC-AUC 0.970, against 0.995 on the full fold. Ninety per cent of the achievable gain above chance arrives at **10%** of the data (figure R16). A benchmark solved by a tenth of its training examples cannot reward sample efficiency, and its reported numbers describe the task rather than the learner.
+
+**3. Case-mix standardisation.** What would this look like in a population with a stated severity mix? Cases are re-weighted to the case mix of a published community screening series [11] (22% stage 1, 46% stage 2, 32% stage 3) and the metric recomputed.
+
+| Configuration | ROC-AUC obs. | ROC-AUC std. | Shift | Sensitivity obs. | Sensitivity std. | Shift |
+|---|---:|---:|---:|---:|---:|---:|
+| Low-cost | 0.993 | 0.989 | +0.0044 | 0.969 | 0.937 | +0.0315 |
+| Laboratory | 0.994 | 0.986 | +0.0084 | 0.969 | 0.912 | +0.0563 |
+| Full valid | 1.000 | 1.000 | +0.0000 | 1.000 | 1.000 | +0.0000 |
+
+**This produced a negative result about the diagnostic itself, and it is the most useful thing in the section.** Standardising the *AUC* barely moves it - at most 0.0084 - so on this evidence it would not flag a benchmark that section 5.5 shows is severely case-mix dependent. The reason is structural: AUC is a rank statistic, and re-weighting which cases are present changes it only insofar as it changes whether cases outrank controls. A model can retain a near-perfect AUC while missing most of the early-stage patients a screening programme exists to find, because those patients still outrank the controls - just by less.
+
+Standardising *sensitivity at a fixed operating point* has no such invariance: a case below the threshold is missed however it ranks. The same re-weighting shifts sensitivity by up to 0.0563, an order of magnitude more than the AUC shift, and flags the laboratory configuration. The lesson generalises beyond this dataset: **spectrum effects hide in AUC by construction, and standardising discrimination is not enough - the operating point has to be standardised too.**
+
+Applied here, the protocol raises a flag for every configuration, which is the correct answer for this benchmark and was reached without reference to any of the three mechanisms that motivated it. Whether the thresholds transfer is an open question; the machinery is released so that others can find out.
+
 ## 6. Discussion
 
 This study set out to measure one failure mode and found three. Each pushes measured performance towards 1.0, none of them is predictive ability, and they compound: controlling any one still leaves the others free to produce a near-perfect number.
@@ -865,6 +897,7 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `fig_r13_ebm_shapes.png`
 - `fig_r14_binning_cost.png`
 - `fig_r15_provenance_null.png`
+- `fig_r16_bid_saturation.png`
 - `fig_r1_auc_heatmap.png`
 - `fig_r2_leakage_audit.png`
 - `fig_r3_screening_metrics.png`
@@ -930,3 +963,7 @@ Reporting follows the spirit of TRIPOD+AI [3]. Of 30 items, 23 are satisfied, 4 
 - `table_40_provenance_null_draws.csv`
 - `table_41_mimic_cohort.csv`
 - `table_42_external_validation.csv`
+- `table_43_bid_lift.csv`
+- `table_43_bid_saturation.csv`
+- `table_43_bid_standardisation.csv`
+- `table_43_bid_summary.csv`

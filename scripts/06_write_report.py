@@ -2039,6 +2039,123 @@ def main() -> int:
           f"the registered sources permit.")
         w("")
 
+    # ---------------- 5.21 Benchmark informativeness diagnostics ----------
+    bid_path = TABLES / "table_43_bid_summary.csv"
+    if bid_path.is_file():
+        bid = t("table_43_bid_summary.csv")
+        bid_lift = t("table_43_bid_lift.csv")
+        bid_sat = t("table_43_bid_saturation.csv")
+        bid_std = t("table_43_bid_standardisation.csv")
+        w("### 5.21 A diagnostic for benchmark informativeness (PROPOSED)")
+        w("")
+        w("Each mechanism in this report was invisible in the number the "
+          "literature reports. That is not an accident of this dataset: "
+          "discrimination answers *how well did this model separate these "
+          "patients*, and says nothing about whether the dataset can tell "
+          "good methods from bad ones. This section proposes three "
+          "measurements that address the gap, and applies them here. They "
+          "are offered as a starting point, not a standard: the thresholds "
+          "come from one benchmark and need calibrating across many.")
+        w("")
+        w("None of the three components is new in itself - direct "
+          "standardisation is routine in epidemiology, learning curves are "
+          "long established, and comparing against a strong single-feature "
+          "baseline is ordinary practice. What is proposed is their "
+          "composition into a benchmark-level check that can be run "
+          "*before* a dataset is trusted.")
+        w("")
+        w("**1. Multivariable lift.** How much did modelling add over the "
+          "single most separable column?")
+        w("")
+        w("| Configuration | Model ROC-AUC | Best single predictor | Its ROC-AUC | Lift (95% CI) |")
+        w("|---|---:|---|---:|---|")
+        for _, r in bid_lift.iterrows():
+            w(f"| {config_label(r['config'])} | {fmt(r['model_roc_auc'])} | "
+              f"`{r['best_single_predictor']}` | "
+              f"{fmt(r['best_single_roc_auc'])} | "
+              f"{r['multivariable_lift']:+.4f} "
+              f"({r['lift_ci_low']:+.4f}, {r['lift_ci_high']:+.4f}) |")
+        w("")
+        lab_lift = bid_lift[bid_lift["config"] == "laboratory_model"]
+        if len(lab_lift):
+            lr = lab_lift.iloc[0]
+            w(f"The laboratory configuration - fourteen variables, a full "
+              f"blood panel and urine microscopy - improves on "
+              f"`{lr['best_single_predictor']}` **alone** by "
+              f"{lr['multivariable_lift']:+.4f} ROC-AUC. The full valid "
+              f"configuration, with 25 variables, adds "
+              f"{float(bid_lift[bid_lift['config'] == 'full_valid_model']['multivariable_lift'].iloc[0]):+.4f}. "
+              f"A benchmark on which the entire modelling exercise is worth "
+              f"three hundredths of an AUC over one raw measurement cannot "
+              f"rank methods, whatever numbers it produces. The low-cost "
+              f"set is the exception "
+              f"({float(bid_lift[bid_lift['config'] == 'low_cost_model']['multivariable_lift'].iloc[0]):+.4f}), "
+              f"which is the one place in this study where combining "
+              f"variables demonstrably does work.")
+            w("")
+        n90_row = bid[bid["fraction_to_reach_90pct"].notna()]
+        if len(n90_row):
+            n90 = float(n90_row["fraction_to_reach_90pct"].iloc[0])
+            first = bid_sat.sort_values("train_fraction").iloc[0]
+            last = bid_sat.sort_values("train_fraction").iloc[-1]
+            w(f"**2. Saturation.** How much of the training data was "
+              f"needed? Using {int(first['train_fraction'] * 100)}% of each "
+              f"training fold - roughly {int(first['n_train_median'])} "
+              f"patients - already reaches ROC-AUC "
+              f"{fmt(first['mean_roc_auc'])}, against "
+              f"{fmt(last['mean_roc_auc'])} on the full fold. Ninety per "
+              f"cent of the achievable gain above chance arrives at "
+              f"**{n90:.0%}** of the data (figure R16). A benchmark solved "
+              f"by a tenth of its training examples cannot reward sample "
+              f"efficiency, and its reported numbers describe the task "
+              f"rather than the learner.")
+            w("")
+        w("**3. Case-mix standardisation.** What would this look like in a "
+          "population with a stated severity mix? Cases are re-weighted to "
+          "the case mix of a published community screening series [11] "
+          "(22% stage 1, 46% stage 2, 32% stage 3) and the metric "
+          "recomputed.")
+        w("")
+        w("| Configuration | ROC-AUC obs. | ROC-AUC std. | Shift | Sensitivity obs. | Sensitivity std. | Shift |")
+        w("|---|---:|---:|---:|---:|---:|---:|")
+        for _, r in bid_std.iterrows():
+            w(f"| {config_label(r['config'])} | "
+              f"{fmt(r['observed_roc_auc'])} | {fmt(r['standardised_roc_auc'])} | "
+              f"{r['standardisation_shift']:+.4f} | "
+              f"{fmt(r['observed_sensitivity'], 3)} | "
+              f"{fmt(r['standardised_sensitivity'], 3)} | "
+              f"{r['sensitivity_standardisation_shift']:+.4f} |")
+        w("")
+        auc_max = float(bid_std["standardisation_shift"].abs().max())
+        sens_max = float(bid_std["sensitivity_standardisation_shift"].abs().max())
+        w(f"**This produced a negative result about the diagnostic itself, "
+          f"and it is the most useful thing in the section.** Standardising "
+          f"the *AUC* barely moves it - at most {auc_max:.4f} - so on this "
+          f"evidence it would not flag a benchmark that section 5.5 shows "
+          f"is severely case-mix dependent. The reason is structural: AUC "
+          f"is a rank statistic, and re-weighting which cases are present "
+          f"changes it only insofar as it changes whether cases outrank "
+          f"controls. A model can retain a near-perfect AUC while missing "
+          f"most of the early-stage patients a screening programme exists "
+          f"to find, because those patients still outrank the controls - "
+          f"just by less.")
+        w("")
+        w(f"Standardising *sensitivity at a fixed operating point* has no "
+          f"such invariance: a case below the threshold is missed however "
+          f"it ranks. The same re-weighting shifts sensitivity by up to "
+          f"{sens_max:.4f}, an order of magnitude more than the AUC shift, "
+          f"and flags the laboratory configuration. The lesson generalises "
+          f"beyond this dataset: **spectrum effects hide in AUC by "
+          f"construction, and standardising discrimination is not enough - "
+          f"the operating point has to be standardised too.**")
+        w("")
+        w("Applied here, the protocol raises a flag for every "
+          "configuration, which is the correct answer for this benchmark "
+          "and was reached without reference to any of the three mechanisms "
+          "that motivated it. Whether the thresholds transfer is an open "
+          "question; the machinery is released so that others can find out.")
+        w("")
+
     # ---------------- Discussion ----------------
     w("## 6. Discussion")
     w("")
