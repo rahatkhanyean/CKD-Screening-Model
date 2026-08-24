@@ -69,13 +69,20 @@ into the 2015 release (maximum bipartite match fraction 1.000 against a
 permutation null of $0.003 \pm 0.003$), 187 of them uniquely, with zero
 contradictions across ten categorical variables that took no part in the
 matching. Of 13 surveyed studies, three validate across these releases as
-though independent and one merges them into a single training set. Recovering
-the original measurements further shows that the published discretisation
-destroys 0.266 ROC-AUC of univariate signal in serum creatinine while changing
-no multivariable conclusion, and that 339 missing cells were silently filled
-with constants whose absence is strongly outcome-associated. We release the
-full pipeline, including a reusable provenance gate that blocks
-non-independent cohorts from supporting external claims.
+though independent and one merges them into a single training set.
+Recovering the original measurements further shows that the published
+discretisation destroys 0.266 ROC-AUC of univariate signal in serum
+creatinine while changing no multivariable conclusion, and that 339 missing
+cells were silently filled with constants whose absence is strongly
+outcome-associated. Finally, transferring the models unchanged to an
+independent critical-care cohort---the only registered source carrying the
+same measurements on different patients---drops discrimination from 0.997 to
+0.70 (95\% CI 0.59--0.80) with Brier rising from 0.014 to 0.42, so the
+near-perfect internal figures do not survive contact with different
+patients. We release the full pipeline, including a reusable provenance gate
+that blocks non-independent cohorts from supporting external claims, and a
+diagnostic protocol that would have flagged this benchmark before any model
+was fitted.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -134,6 +141,13 @@ fired, and the investigation into why became the study.
   \item We report an \textbf{honest uncertainty interval} obtained by
         bootstrapping the entire nested procedure, which is 1.7--2.7$\times$
         wider than the conventional prediction-level interval.
+  \item We supply the \textbf{external validation} the benchmark's own
+        literature lacks, on the one independent source carrying the same
+        measurements, and find that discrimination near 1.0 falls to 0.70 on
+        patients the models never saw.
+  \item We propose a \textbf{diagnostic protocol} for deciding whether a
+        benchmark can distinguish methods at all, and report a negative
+        result about one of its own components.
 \end{enumerate}
 
 %==============================================================================
@@ -364,6 +378,7 @@ That the honest baseline is already saturated is itself the finding that
 motivates the next section.
 
 \subsection{Mechanism 2: case-mix composition}
+\label{sec:mech2}
 
 With every prohibited column removed, leakage prevented by a guard that
 raises, and an automated audit confirming no violation across all 36 pipelines
@@ -688,6 +703,190 @@ diabetes, hypertension and poor appetite all push the same way.}
 screening result}, because a sample in which 84\% of cases carry
 moderate-to-severe disease is not a screening population.
 
+\subsection{External validation}
+\label{sec:external}
+
+Every result above is internal. The provenance gate disqualified the obvious
+external candidate (Section~\ref{sec:mech3}), leaving one registered source
+that carries the \emph{same measurements} on different patients: the MIMIC-IV
+critical-care demonstration database, from a different country and health
+system. We extracted 100 subjects in this study's schema---26 coded CKD by
+ICD-10 \texttt{N18*} or ICD-9 \texttt{585*}, with nine blood analytes at
+92--94\% coverage plus urine specific gravity.
+
+Three properties of the extraction are load-bearing. The derived label is
+named so that the registry's prohibited-column declaration, written before
+the extraction existed, already covers it. A \emph{temporal guard} discards
+laboratory values that do not strictly precede the admission at which CKD was
+first coded, removing 8{,}754 values. And the six subjects left with no
+eligible measurement are reported rather than imputed into existence.
+
+Models were trained on all 200 analysed patients and applied \textbf{without
+any refitting}. The transfer feature set is the intersection of the two
+schemas---ten variables---passed as a ``feature override'' on the existing
+valid configuration so that both leakage guards still run. An internal
+reference is computed on exactly that feature set, so the drop caused by
+transfer is separable from any drop caused by using fewer variables.
+
+% Source: reports/tables/table_42_external_validation.csv
+\begin{table}[t]
+\caption{Frozen transfer to an independent cohort. Internal reference and
+external result use the same ten variables.}
+\label{tab:external}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccc}
+\toprule
+\tabhead{Model} & \tabhead{Int.\ AUC} & \tabhead{Ext.\ AUC (95\% CI)} &
+\tabhead{Brier} & \tabhead{Sens.} & \tabhead{Spec.} \\
+\midrule
+Logistic  & 0.997 & 0.702 (0.594--0.794) & 0.409 & 0.95 & 0.47 \\
+SVM       & 0.997 & 0.699 (0.599--0.788) & 0.423 & 0.95 & 0.45 \\
+Random forest & 0.997 & 0.708 (0.605--0.803) & 0.418 & 0.95 & 0.39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Discrimination does not transfer.} Internal ROC-AUC on this feature
+set is 0.997; externally it is 0.699--0.708, a fall of roughly 0.29
+(Table~\ref{tab:external}). All three model families agree, and the bootstrap
+intervals exclude the internal estimate by a wide margin. This is the single
+most consequential number in the paper: the near-perfect internal figures
+reported here, and throughout the literature on this benchmark, do not
+survive contact with different patients.
+
+\textbf{Calibration fails worse, and for a legible reason.} External Brier
+scores are 0.409--0.423 against 0.014 internally, with calibration intercepts
+far below zero: the models assign high risk to almost everyone. At the
+prespecified threshold they retain sensitivity 0.95 while specificity
+collapses to 0.39--0.47. Prevalence is the obvious culprit---64\% in training
+against 21\% externally. Applying recalibration-in-the-large, the minimal
+correction a deployer would make, reduces the Brier score to 0.172--0.175. It
+cannot change the ranking, so discrimination is unmoved by construction, and
+it leaves no prediction above 0.50, so the model flags nobody at the
+prespecified threshold. \emph{The binding constraint is the discrimination of
+0.70, not the calibration}, and no post-hoc correction addresses it.
+
+\textbf{How much is optimism and how much is population shift?} Both, and
+this design cannot separate them. The external cohort is a critical-care
+population in another country with administratively coded rather than
+adjudicated labels, so part of the fall is genuine case-mix and measurement
+difference rather than internal over-fitting. The cohort is also small---94
+subjects with 20 cases after exclusions---so the external estimate is itself
+imprecise, which the interval shows. What the comparison establishes is the
+direction and order of magnitude, and that both are consistent with what
+Sections~\ref{sec:mech3} and \ref{sec:honest} predict: a model selected on a
+sample this separable, with intervals this wide, should not be expected to
+transfer, and it does not.
+
+%==============================================================================
+\section{A Proposed Diagnostic for Benchmark Informativeness}
+\label{sec:bid}
+
+Every mechanism above was invisible in the number the literature reports.
+That is not an accident of this dataset. Discrimination answers ``how well
+did this model separate these patients?'' and says nothing about whether the
+dataset can distinguish good methods from bad ones. This section proposes
+three measurements that address the gap and applies them here.
+
+We state the provenance of the idea plainly: none of the three components is
+new. Direct standardisation is routine in epidemiology, learning curves are
+long established, and comparing a model against a strong single-feature
+baseline is ordinary practice. What is proposed is their composition into a
+\emph{benchmark-level} check that can be run before a dataset is trusted,
+with reporting thresholds. Those thresholds are calibrated on one benchmark
+and are offered for discussion, not as standards.
+
+\subsection{Multivariable lift}
+
+How much did modelling add over the single most separable column? We report
+$\mathrm{AUC}(\text{model}) - \mathrm{AUC}(\text{best single predictor})$,
+with a paired patient-level bootstrap interval. The baseline is given the
+benefit of the doubt: a single raw column has no fitted direction, so its AUC
+is taken as $\max(\mathrm{AUC}, 1-\mathrm{AUC})$, which makes the lift
+smaller rather than larger.
+
+% Source: reports/tables/table_43_bid_lift.csv
+\begin{table}[t]
+\caption{Multivariable lift over the best single predictor.}
+\label{tab:lift}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccc}
+\toprule
+\tabhead{Configuration} & \tabhead{Model} & \tabhead{Best single} &
+\tabhead{Lift (95\% CI)} \\
+\midrule
+Low-cost (11)   & 0.993 & \texttt{sg} 0.888   & $+0.105$ (0.071, 0.145) \\
+Laboratory (14) & 0.994 & \texttt{hemo} 0.968 & $+0.026$ (0.010, 0.043) \\
+Full valid (25) & 1.000 & \texttt{hemo} 0.968 & $+0.032$ (0.014, 0.053) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The laboratory configuration---fourteen variables, a full blood panel and
+urine microscopy---improves on haemoglobin \emph{alone} by 0.026 ROC-AUC
+(Table~\ref{tab:lift}). The full valid configuration, with 25 variables, adds
+0.032. A benchmark on which the entire modelling exercise is worth three
+hundredths of an AUC over one raw measurement cannot rank methods, whatever
+numbers it produces. The low-cost set is the informative exception at
+$+0.105$: it is the one place in this study where combining variables
+demonstrably works, which is consistent with its variables being
+non-redundant rather than proxies for one another.
+
+\subsection{Saturation}
+
+How much of the training data was needed? Using 10\% of each training
+fold---roughly 16 patients---already reaches ROC-AUC 0.970, against 0.996 on
+the full fold. Ninety per cent of the achievable gain above chance arrives at
+10\% of the data (Fig.~\ref{fig:saturation}). A benchmark solved by a tenth
+of its training examples cannot reward sample efficiency, and its reported
+numbers describe the task rather than the learner.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_r16_bid_saturation.pdf}
+\caption{Held-out discrimination against the fraction of the training fold
+used. The curve is flat from a tenth of the data onward, so the benchmark
+cannot distinguish methods by how efficiently they learn.}
+\label{fig:saturation}
+\end{figure}
+
+\subsection{Case-mix standardisation, and a negative result}
+
+What would the numbers be in a population with a stated severity mix? We
+re-weight cases to the case mix of a published community screening
+series~\cite{kabir2026} (22\% stage 1, 46\% stage 2, 32\% stage 3) and
+recompute. Standardising the \emph{AUC} moves it by at most 0.008---so on
+this evidence it would not flag a benchmark that Section~\ref{sec:mech2} shows is
+case-mix dependent at a threshold.
+
+The explanation is specific to this dataset, and stating it precisely
+matters. AUC is a rank statistic, so re-weighting which cases are present
+moves it only insofar as it changes whether cases outrank controls. Here even
+the early-stage cases are well separated---their subgroup ROC-AUC is
+0.983---so shifting weight toward them changes few rankings. Sensitivity at a
+fixed threshold has no such invariance: a case below the threshold is missed
+however it ranks, and the same re-weighting shifts it by up to 0.056, an
+order of magnitude more, flagging the laboratory configuration.
+
+This is \textbf{not} evidence that AUC is generally blind to spectrum
+effects. It plainly is not: a case mix that pushes cases below controls does
+move AUC, which is why spectrum bias is a recognised threat to discrimination
+measures. What this dataset shows is narrower and still useful---a sample can
+be separable enough that AUC absorbs a large change in case mix while a
+threshold-based metric does not. The practical consequence is that
+standardising discrimination alone can give false reassurance, so an
+operating-point metric should be standardised alongside it. Which of the two
+moves more will depend on the dataset.
+
+Applied here, the protocol raises at least one flag for every configuration,
+and reaches that conclusion without reference to any of the three mechanisms
+that motivated it. Whether the thresholds transfer is an open question; the
+machinery is released so that others can find out.
+
 %==============================================================================
 \section{Discussion}
 
@@ -711,23 +910,42 @@ reaches 0.97 alone, the modelling is not what is producing the result.
 \emph{Verify that a validation cohort is a different set of patients}, by
 record-level comparison rather than by documentation.
 
+The external result in Section~\ref{sec:external} converts that argument from
+a prediction into an observation. A model whose internal discrimination is
+0.997 achieves 0.70 on patients it has not seen, with calibration that would
+refer almost the entire cohort. We are careful about what this does and does
+not show---the external population differs in setting, country and labelling,
+so it is not a clean measurement of optimism---but the claim it supports is
+the modest one the paper needs: on this benchmark, an internal figure near
+1.0 carries almost no information about performance elsewhere.
+
 The wider implication concerns how benchmark results are read. Two of the
 three mechanisms here are properties of the data that no amount of careful
 modelling can correct, and the third invalidates the evidence normally taken
 as decisive. A reported accuracy of 99\% on this benchmark is compatible with
 a model that has learned nothing transferable, and distinguishing the cases
 requires exactly the leakage audit, subgroup analysis and provenance check
-reported here.
+reported here. Section~\ref{sec:bid} asks the further question of whether the
+benchmark can rank methods at all, and answers no: the entire modelling
+exercise is worth about 0.03 ROC-AUC over one raw measurement, and a tenth of
+the training data suffices.
 
 %==============================================================================
 \section{Limitations}
 
-Every estimate is internal to 200 patients, and the study has \textbf{no
-external validation}. The natural remedy---the larger 2015 release---is
-disqualified by our own finding, and the gate enforces that rather than merely
-stating it. Genuine external validation requires a cohort we do not have; the
-most suitable candidate identified is a community-based series with 68\% of
-cases at stages 1--2, access to which is restricted.
+Model development rests on 200 patients, and \textbf{external validation
+rests on one small, confounded cohort}. The natural comparator---the larger
+2015 release---is disqualified by our own finding, and the gate enforces that
+rather than merely stating it. The cohort we do use has 94 subjects and 20
+cases, is drawn from critical care rather than any screening or general
+population, sits in a different country and health system, and carries
+administratively coded rather than adjudicated labels with no chronicity
+criterion verified. It establishes that discrimination collapses on unseen
+patients; it cannot apportion that collapse between internal optimism and
+population shift, and it is far too small and too unrepresentative to
+estimate what performance in any intended setting would be. The most suitable
+remaining candidate is a community-based series with 68\% of cases at stages
+1--2, access to which is restricted.
 
 The sampling is hospital-based and single-centre; the 64\% prevalence is a
 property of recruitment, and PPV and NPV reported at that prevalence do not
@@ -742,11 +960,21 @@ banded and no sex, ethnicity or socioeconomic variable exists, so
 rather than an excuse for silence.
 
 The literature survey is targeted rather than systematic, and 10 of its 13
-rows await hand verification behind paywalls. Reproducibility has an honest
-limit: identical seeds reproduce identical predictions within an environment,
-but across an environment rebuild agreement is to approximately $10^{-16}$
-rather than bit-for-bit, because floating-point summation order depends on the
-installed BLAS.
+rows await hand verification behind paywalls. This matters more than most
+limitations here, because the paper's opening claim is a claim about the
+literature.
+
+The diagnostic protocol of Section~\ref{sec:bid} is a proposal, not a
+validated instrument. Its thresholds are set from the behaviour of a single
+benchmark, its components are individually familiar rather than novel, and
+one of them---standardised AUC---failed to flag a dataset it should have,
+which we report rather than remove. It should be read as a starting point for
+discussion.
+
+Reproducibility has an honest limit: identical seeds reproduce identical
+predictions within an environment, but across an environment rebuild
+agreement is to approximately $10^{-16}$ rather than bit-for-bit, because
+floating-point summation order depends on the installed BLAS.
 
 We make no claim about clinical utility, causality, deployment readiness or
 generalisability, and none about \emph{how} the provenance discrepancy arose.
@@ -762,12 +990,24 @@ unaided, and is the larger effect. And the two releases the literature treats
 as independent cohorts share their patients record-for-record, so published
 cross-dataset validations between them measure resubstitution.
 
+Transferring the models unchanged to an independent cohort then shows what
+those mechanisms cost: discrimination of 0.997 becomes 0.70, and calibration
+fails badly enough to refer nearly everyone. That cohort is small and
+differently constituted, so it bounds the direction rather than the
+magnitude---but the direction is the point.
+
 What the work supports is a methodological claim in two parts. About this
 benchmark: its reported numbers are largely explained by properties of the
 data, the largest of which is rarely examined and the least visible of which
 invalidates the cross-dataset validations that would otherwise be its
-strongest evidence. About method: all three were found by checks that can be
-run \emph{before} any model is fitted.
+strongest evidence; and what remains does not transfer. About method: all
+three mechanisms were found by checks that can be run \emph{before} any model
+is fitted---declare and enforce prohibited columns, inspect the case mix and
+univariate separability, and verify at record level that a validation cohort
+is a different set of patients. We add a fourth question worth asking of any
+benchmark before trusting it: does modelling beat the best single column, and
+does the task need more than a fraction of the data? On this benchmark the
+answers are barely and no.
 
 Prospective validation in a genuine screening series would be required before
 any clinical interpretation is warranted, and no dataset examined here can
@@ -780,9 +1020,10 @@ The complete pipeline, including the provenance gate as reusable
 dataset-agnostic machinery, is available in the accompanying repository. One
 master seed derives every fold and model seed; the raw file is checksummed on
 every load and never modified; all 108{,}000 out-of-fold predictions are
-written to a single table from which every reported number is derived; and 380
+written to a single table from which every reported number is derived; and 416
 automated tests enforce the leakage, determinism and report-consistency
-guarantees. Environment and BLAS build are recorded in a lock file. Reporting
+guarantees, including the provenance gate and the external-cohort temporal
+guard. Environment and BLAS build are recorded in a lock file. Reporting
 follows the spirit of TRIPOD+AI~\cite{tripod2024}; a completed checklist
 accompanies the repository.
 

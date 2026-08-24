@@ -1,7 +1,14 @@
 # IEEE paper
 
-`ieee_paper.tex` — IEEE conference format (`IEEEtran`), 8 pages including
+`ieee_paper.tex` — IEEE conference format (`IEEEtran`), 10 pages including
 references.
+
+Structure: three mechanisms as the spine (Results A–C), then the recovery
+findings, honest intervals and robustness (D–I), then **external validation**
+(J) — the paper's most consequential number. Section VI proposes the
+benchmark-informativeness diagnostic, positioned deliberately *after* the
+empirical results and labelled a proposal, because its components are
+individually familiar and its thresholds rest on one dataset.
 
 ## Build
 
@@ -11,7 +18,8 @@ pdflatex ieee_paper && pdflatex ieee_paper   # run twice for cross-references
 ```
 
 Verified with MiKTeX (pdfTeX): 0 overfull boxes, 0 undefined references,
-12 of 12 bibliography entries cited.
+12 of 12 bibliography entries cited, and no hardcoded section
+cross-references (all resolved through `\ref`).
 
 The bibliography is inline (`thebibliography`) so the document compiles with
 no external `.bib` or `.bst` file. To switch to BibTeX for submission,
@@ -44,6 +52,7 @@ figures are copied unmodified from `reports/figures/`:
 | Fig. 2 provenance null | `fig_r15_provenance_null.pdf` | `scripts/17_provenance_figure.py` |
 | Fig. 3 binning cost | `fig_r14_binning_cost.pdf` | `scripts/11_continuous_recovery.py` |
 | Fig. 4 EBM shapes | `fig_r13_ebm_shapes.pdf` | `scripts/10_ebm_shapes.py` |
+| Fig. 5 saturation | `fig_r16_bid_saturation.pdf` | `scripts/20_benchmark_diagnostics.py` |
 
 To regenerate the figures after a pipeline change, re-run the stage above and
 re-copy the PDF into `paper/figures/`.
