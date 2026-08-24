@@ -60,8 +60,11 @@ label, and the diagnostic eGFR value; including them takes every feature
 configuration to ROC-AUC 1.000. Second, and larger, \emph{case-mix
 composition}: with every prohibited column removed, models still separate all
 200 patients out of fold, because 84\% of cases carry stage 3--5 disease and
-haemoglobin alone reaches univariate ROC-AUC 0.968; restricted to early-stage
-disease, sensitivity falls from 0.969 to 0.905. Third, and least visible,
+haemoglobin alone reaches univariate ROC-AUC 0.968; in an exploratory, post
+hoc and statistically underpowered subgroup of the 21 early-stage cases,
+sensitivity falls from 0.969 to 0.905, a hypothesis-generating signal
+requiring confirmation in a larger prospectively defined cohort. Third, and
+least visible,
 \emph{pseudo-external validation}: a record-level provenance check shows that
 the 2015 and 2020 UCI releases, treated in the literature as independent
 cohorts, share their patients. All 200 patients of the 2020 release match
@@ -74,20 +77,24 @@ Recovering the original measurements further shows that the published
 discretisation destroys 0.266 ROC-AUC of univariate signal in serum
 creatinine while changing no multivariable conclusion, and that 339 missing
 cells were silently filled with constants whose absence is strongly
-outcome-associated. Finally, transferring the models unchanged to an
+outcome-associated. Finally, as a \emph{transportability probe} rather than a
+definitive external validation, we transfer the models unchanged to an
 independent critical-care cohort---the only registered source carrying the
-same measurements on different patients---drops discrimination from 0.997 to
-0.70 (95\% CI 0.59--0.80) with Brier rising from 0.014 to 0.42, so the
-near-perfect internal figures do not survive contact with different
-patients. We release the full pipeline, including a reusable provenance gate
-that blocks non-independent cohorts from supporting external claims, and a
-diagnostic protocol that would have flagged this benchmark before any model
+same measurements on different patients---where discrimination falls from
+0.997 to 0.70 (95\% CI 0.59--0.80) and Brier rises from 0.014 to 0.42. With
+20 cases in a markedly different clinical setting, this difference cannot be
+attributed to internal optimism alone: small-sample uncertainty, case mix,
+feature definition, missingness and genuine distribution shift all plausibly
+contribute. We release the full pipeline, including a reusable provenance
+gate that blocks non-independent cohorts from supporting external claims, and
+a diagnostic protocol that would have flagged this benchmark before any model
 was fitted.
 \end{abstract}
 
 \begin{IEEEkeywords}
-chronic kidney disease, data leakage, spectrum bias, external validation,
-benchmark quality, clinical prediction models, reproducibility
+chronic kidney disease, data leakage, spectrum bias, transportability,
+external validation, benchmark quality, clinical prediction models,
+reproducibility
 \end{IEEEkeywords}
 
 %==============================================================================
@@ -141,10 +148,12 @@ fired, and the investigation into why became the study.
   \item We report an \textbf{honest uncertainty interval} obtained by
         bootstrapping the entire nested procedure, which is 1.7--2.7$\times$
         wider than the conventional prediction-level interval.
-  \item We supply the \textbf{external validation} the benchmark's own
-        literature lacks, on the one independent source carrying the same
-        measurements, and find that discrimination near 1.0 falls to 0.70 on
-        patients the models never saw.
+  \item We report a \textbf{transportability probe} on the one independent
+        source carrying the same measurements, in which discrimination near
+        1.0 falls to 0.70 on patients the models never saw. With 20 cases in
+        a different clinical setting it is a stress test rather than a
+        definitive external validation, and we are explicit about the several
+        mechanisms that could produce the difference.
   \item We propose a \textbf{diagnostic protocol} for deciding whether a
         benchmark can distinguish methods at all, and report a negative
         result about one of its own components.
@@ -275,6 +284,7 @@ configuration. This is the conservative choice: it can only \emph{understate}
 low-cost performance.
 
 \subsection{Leakage prevention, enforced in code}
+\label{sec:leakageprev}
 
 Prevention operates in three independent layers. \emph{Declaration}: a single
 module names every prohibited column and each configuration's exact contents.
@@ -419,22 +429,35 @@ concentration are \emph{consequences} of established kidney disease; they are
 precisely the features absent in the patients a screening programme most needs
 to identify.
 
-Restricting to early CKD (s1--s2, $n=21$) versus non-CKD, sensitivity at the
+Restricting to early CKD (s1--s2) versus non-CKD, sensitivity at the
 prespecified threshold falls from 0.969 to 0.905 for the low-cost
 configuration and from 0.891 to 0.762 for the clinical-only configuration
-(Fig.~\ref{fig:spectrum}). These subgroup analyses are exploratory and post
-hoc, and the early subgroup is small; they are reported because the direction
-is consistent across configurations and because the underlying case-mix
-imbalance is a hard fact about the sample rather than an inference.
+(Fig.~\ref{fig:spectrum}).
+
+\textbf{These early-stage figures are exploratory and must not be read as
+estimates.} The subgroup contains \textbf{21 cases}, the analysis was defined
+post hoc after the ceiling was observed rather than prespecified, and no
+formal comparison is made or implied: with 21 cases the confidence interval
+on any subgroup sensitivity spans a large part of the achievable range, and a
+difference of the size reported would not survive a demand for statistical
+significance. We report the numbers as \emph{hypothesis-generating} for three
+reasons: the direction is consistent across every cheaper configuration, the
+underlying case-mix imbalance (107 of 128 cases at s3--s5) is an arithmetic
+fact about the sample rather than an inference, and omitting the analysis
+would leave the aggregate figures looking more like screening performance
+than they are. Confirmation requires a larger, prospectively defined
+early-stage cohort. We draw no causal conclusion and make no claim that the
+effect size generalises beyond this sample.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{fig_r12_spectrum_effect.pdf}
 \caption{Performance by disease-stage subgroup. Discrimination measured on the
-sample as a whole is systematically optimistic relative to the early-stage
-patients that screening exists to find. Panel C shows that single predictors
-already separate the groups, which is why no multivariable learning is
-required to reach the ceiling.}
+sample as a whole appears optimistic relative to the early-stage patients that
+screening exists to find; the early subgroup contains only 21 cases, so these
+comparisons are exploratory and hypothesis-generating rather than estimates.
+Panel C shows that single predictors already separate the groups, which is why
+no multivariable learning is required to reach the ceiling.}
 \label{fig:spectrum}
 \end{figure*}
 
@@ -548,6 +571,7 @@ need to defend that inclusion far more carefully---and could not learn this
 from the released file alone.
 
 \subsection{Undocumented constant imputation}
+\label{sec:imputation}
 
 The recovery surfaced a second property of the release. The analysed file
 contains exactly one missing cell; its source contains many. Across the
@@ -703,7 +727,7 @@ diabetes, hypertension and poor appetite all push the same way.}
 screening result}, because a sample in which 84\% of cases carry
 moderate-to-severe disease is not a screening population.
 
-\subsection{External validation}
+\subsection{A transportability probe on an independent cohort}
 \label{sec:external}
 
 Every result above is internal. The provenance gate disqualified the obvious
@@ -713,6 +737,16 @@ critical-care demonstration database, from a different country and health
 system. We extracted 100 subjects in this study's schema---26 coded CKD by
 ICD-10 \texttt{N18*} or ICD-9 \texttt{585*}, with nine blood analytes at
 92--94\% coverage plus urine specific gravity.
+
+We describe this experiment as a \emph{transportability probe} or stress
+test, not as an external validation of the kind that would support a
+performance claim. A validation cohort would need to be adequately powered,
+drawn from a population in which the model is intended to operate, and
+labelled by the same standard as the development data. This cohort satisfies
+none of those conditions: it contributes 20 cases, comes from critical care,
+and is labelled administratively. What it can do---and what a validation
+cohort is not needed for---is test whether performance near the ceiling
+persists when the patients change at all.
 
 Three properties of the extraction are load-bearing. The derived label is
 named so that the registry's prohibited-column declaration, written before
@@ -748,13 +782,15 @@ Random forest & 0.997 & 0.708 (0.605--0.803) & 0.418 & 0.95 & 0.39 \\
 \end{tabular}
 \end{table}
 
-\textbf{Discrimination does not transfer.} Internal ROC-AUC on this feature
-set is 0.997; externally it is 0.699--0.708, a fall of roughly 0.29
-(Table~\ref{tab:external}). All three model families agree, and the bootstrap
-intervals exclude the internal estimate by a wide margin. This is the single
-most consequential number in the paper: the near-perfect internal figures
-reported here, and throughout the literature on this benchmark, do not
-survive contact with different patients.
+\textbf{Discrimination falls sharply on the new cohort.} Internal ROC-AUC on
+this feature set is 0.997; on the probe cohort it is 0.699--0.708, a fall of
+roughly 0.29 (Table~\ref{tab:external}). All three model families agree, and
+the bootstrap intervals exclude the internal estimate by a wide margin. The
+inference this supports is a conditional one: performance measured near the
+ceiling on this benchmark is not, on this evidence, a reliable guide to
+performance on a different patient population. It does not by itself
+establish how much of the internal figure was optimism, and we quantify
+neither.
 
 \textbf{Calibration fails worse, and for a legible reason.} External Brier
 scores are 0.409--0.423 against 0.014 internally, with calibration intercepts
@@ -768,17 +804,48 @@ it leaves no prediction above 0.50, so the model flags nobody at the
 prespecified threshold. \emph{The binding constraint is the discrimination of
 0.70, not the calibration}, and no post-hoc correction addresses it.
 
-\textbf{How much is optimism and how much is population shift?} Both, and
-this design cannot separate them. The external cohort is a critical-care
-population in another country with administratively coded rather than
-adjudicated labels, so part of the fall is genuine case-mix and measurement
-difference rather than internal over-fitting. The cohort is also small---94
-subjects with 20 cases after exclusions---so the external estimate is itself
-imprecise, which the interval shows. What the comparison establishes is the
-direction and order of magnitude, and that both are consistent with what
-Sections~\ref{sec:mech3} and \ref{sec:honest} predict: a model selected on a
-sample this separable, with intervals this wide, should not be expected to
-transfer, and it does not.
+\textbf{The difference cannot be attributed to internal optimism alone.}
+This design cannot decompose it, and at least six mechanisms plausibly
+contribute:
+
+\begin{itemize}
+  \item \emph{Small-sample uncertainty.} The probe rests on 20 cases and 74
+        controls; the interval spans 0.59--0.80, so the point estimate is
+        itself imprecise.
+  \item \emph{Case-mix differences.} The development sample is 84\% stage
+        3--5 with 64\% prevalence; the probe cohort is critical-care with
+        21\% prevalence and a different severity profile.
+  \item \emph{Measurement and feature definition.} Analytes are drawn from
+        hospital laboratory systems under different assay and reporting
+        conventions, and the urine dipstick tier is semi-quantitative text
+        mapped to an ordinal scale rather than natively recorded.
+  \item \emph{Missingness differences.} The development file contains one
+        missing cell because the release imputed the rest with constants
+        (Section~\ref{sec:imputation}); the probe cohort has genuine
+        missingness imputed within training folds. The two arms therefore
+        differ in how absent measurements are represented.
+  \item \emph{Clinical setting.} Critical-care admission selects patients on
+        acute physiology, which perturbs precisely the analytes the models
+        rely on.
+  \item \emph{Genuine population and distribution shift}, including
+        differences in country, health system, era and coding practice.
+\end{itemize}
+
+Internal optimism is a seventh candidate, and the study offers indirect
+support for it---the honest intervals of Section~\ref{sec:honest} and the
+saturation behaviour of Section~\ref{sec:bid} both indicate a sample that
+should not be expected to transfer---but the probe does not isolate it.
+Attributing the fall to any single mechanism, optimism included, would
+overstate what a 20-case comparison can support.
+
+None of this diminishes what the probe contributes. It is the only evidence
+in the study drawn from patients the models had never seen, it is the only
+such evidence the registered sources permit once the provenance gate has
+excluded the alternative, and its direction is unambiguous and consistent
+across three model families. A benchmark whose reported discrimination is
+0.99 and whose models score 0.70 on the first independent cohort available
+warrants the caution this paper argues for, whatever the decomposition of
+that gap turns out to be.
 
 %==============================================================================
 \section{A Proposed Diagnostic for Benchmark Informativeness}
@@ -866,11 +933,16 @@ case-mix dependent at a threshold.
 The explanation is specific to this dataset, and stating it precisely
 matters. AUC is a rank statistic, so re-weighting which cases are present
 moves it only insofar as it changes whether cases outrank controls. Here even
-the early-stage cases are well separated---their subgroup ROC-AUC is
-0.983---so shifting weight toward them changes few rankings. Sensitivity at a
-fixed threshold has no such invariance: a case below the threshold is missed
-however it ranks, and the same re-weighting shifts it by up to 0.056, an
-order of magnitude more, flagging the laboratory configuration.
+the early-stage cases are well separated---their subgroup ROC-AUC is 0.983,
+on 21 cases and therefore imprecise---so shifting weight toward them changes
+few rankings. Sensitivity at a fixed threshold has no such invariance: a case
+below the threshold is missed however it ranks, and the same re-weighting
+shifts it by up to 0.056, an order of magnitude more, flagging the laboratory
+configuration. Because the re-weighting concentrates on a 21-case stratum,
+the standardised quantities inherit that imprecision and are reported as
+exploratory; the effective case count after weighting is 38.2, and we draw no
+inference from the standardised values other than the qualitative contrast
+between the two metrics' sensitivity to case mix.
 
 This is \textbf{not} evidence that AUC is generally blind to spectrum
 effects. It plainly is not: a case mix that pushes cases below controls does
@@ -910,14 +982,20 @@ reaches 0.97 alone, the modelling is not what is producing the result.
 \emph{Verify that a validation cohort is a different set of patients}, by
 record-level comparison rather than by documentation.
 
-The external result in Section~\ref{sec:external} converts that argument from
-a prediction into an observation. A model whose internal discrimination is
-0.997 achieves 0.70 on patients it has not seen, with calibration that would
-refer almost the entire cohort. We are careful about what this does and does
-not show---the external population differs in setting, country and labelling,
-so it is not a clean measurement of optimism---but the claim it supports is
-the modest one the paper needs: on this benchmark, an internal figure near
-1.0 carries almost no information about performance elsewhere.
+The transportability probe in Section~\ref{sec:external} lends that argument
+empirical support, within limits we state rather than minimise. A model whose
+internal discrimination is 0.997 achieves 0.70 on patients it has not seen,
+with calibration that would refer almost the entire cohort. The probe is
+underpowered at 20 cases, drawn from critical care, and labelled
+administratively, so the gap reflects some combination of small-sample
+variation, case mix, measurement and feature definition, missingness
+handling, clinical setting and distribution shift, alongside any internal
+optimism; the design cannot apportion it. The claim it supports is
+correspondingly modest and is the one the paper needs: on this benchmark, an
+internal figure near 1.0 is a poor guide to performance on different
+patients. Establishing \emph{why}, and estimating what performance in an
+intended setting would be, requires an adequately powered cohort from that
+setting.
 
 The wider implication concerns how benchmark results are read. Two of the
 three mechanisms here are properties of the data that no amount of careful
@@ -930,27 +1008,99 @@ benchmark can rank methods at all, and answers no: the entire modelling
 exercise is worth about 0.03 ROC-AUC over one raw measurement, and a tenth of
 the training data suffices.
 
+\subsection{Extension to synthetic tabular and synthetic patient data}
+\label{sec:synthetic}
+
+The failure modes documented here are not specific to real data, and the
+safeguards generalise directly to pipelines that generate or evaluate
+synthetic tabular records. Synthetic-data evaluation is in one respect
+harder: a generator trained on a source table can reproduce individual rows,
+so the question ``is the evaluation set independent of the training set?''
+becomes a question about memorisation as well as provenance, and the
+mechanisms of Sections~\ref{sec:mech3} and \ref{sec:gate} answer only the
+latter.
+
+Seven components of the protocol we implement are already directly reusable.
+Cryptographic dataset fingerprints establish that an input has not silently
+changed; here the source file is SHA-256 checksummed on every load and
+re-verified in continuous integration. Exact-row and near-duplicate detection
+across training, validation, test and reference sets generalises the
+interval-containment matching of Section~\ref{sec:mech3}, which is a
+tolerance-based near-duplicate test calibrated against a permutation null.
+Entity-level overlap checks using stable identifiers, or privacy-preserving
+linkage where identifiers cannot be shared, correspond to the bipartite
+matching and held-out categorical confirmation reported there.
+Feature--target leakage scans and the detection of target proxies and
+post-outcome variables correspond to the declared prohibited-column sets and
+the outcome-proxy audit of Section~\ref{sec:leakageprev}. Enforcing that all
+preprocessing is
+fitted inside cross-validation folds is the guard tested here. Provenance
+manifests recording origin, version, transformations and split history
+correspond to the run manifest and external-dataset registry. And the
+fail-closed gate---blocking evaluation when overlap, leakage or undocumented
+provenance exceeds a threshold---is implemented as a test that fails when any
+non-independent cohort appears in an external-validation table.
+
+Two further components are specific to synthetic data and are \emph{not}
+implemented here. Membership-inference and memorisation checks ask whether a
+synthetic record discloses that a particular real patient was in the training
+set. Nearest-neighbour similarity and distance-to-closest-record diagnostics
+ask whether synthetic rows are near-copies of real ones, which is both a
+privacy question and an evaluation-validity question: a synthetic test set
+whose records sit arbitrarily close to training records reproduces, in a
+subtler form, exactly the pseudo-external validation of
+Section~\ref{sec:mech3}. Adding them to the gate we release is the natural
+next step and we have not taken it; the present work provides the provenance
+half of the problem, not the memorisation half.
+
+We note the analogy carries a caution as well as a recipe. The most
+consequential mechanism in this study was not leakage but case
+mix---something no fingerprint, hash or duplicate scan would detect. A
+synthetic cohort can be free of memorisation, pass every overlap check, and
+still be uninformative because its severity distribution makes the task
+trivial. Diagnostics of the kind proposed in Section~\ref{sec:bid} are
+complementary to provenance gating for that reason, and we would expect a
+mature synthetic-data evaluation pipeline to run both.
+
 %==============================================================================
 \section{Limitations}
 
-Model development rests on 200 patients, and \textbf{external validation
-rests on one small, confounded cohort}. The natural comparator---the larger
-2015 release---is disqualified by our own finding, and the gate enforces that
-rather than merely stating it. The cohort we do use has 94 subjects and 20
-cases, is drawn from critical care rather than any screening or general
-population, sits in a different country and health system, and carries
-administratively coded rather than adjudicated labels with no chronicity
-criterion verified. It establishes that discrimination collapses on unseen
-patients; it cannot apportion that collapse between internal optimism and
-population shift, and it is far too small and too unrepresentative to
-estimate what performance in any intended setting would be. The most suitable
-remaining candidate is a community-based series with 68\% of cases at stages
-1--2, access to which is restricted.
+Model development rests on 200 patients, and \textbf{the study has no
+adequately powered external validation}. What it has is a transportability
+probe (Section~\ref{sec:external}) on 94 subjects and 20 cases. The natural
+comparator---the larger 2015 release---is disqualified by our own finding,
+and the gate enforces that rather than merely stating it. The probe cohort is
+drawn from critical care rather than any screening or general population,
+sits in a different country and health system, and carries administratively
+coded rather than adjudicated labels with no chronicity criterion verified.
+It demonstrates that discrimination measured on this benchmark does not
+persist on a different population; it \emph{cannot} apportion that difference
+among small-sample uncertainty, case mix, measurement and feature definition,
+missingness handling, clinical setting, distribution shift and internal
+optimism, and it is far too small and too unrepresentative to estimate what
+performance in any intended setting would be. No performance claim for any
+population should be drawn from it. The most suitable remaining candidate is
+a community-based series with 68\% of cases at stages 1--2, access to which
+is restricted.
 
 The sampling is hospital-based and single-centre; the 64\% prevalence is a
 property of recruitment, and PPV and NPV reported at that prevalence do not
 transfer. The case mix is the most consequential limitation and is why no
-figure here estimates screening performance. Four records are internally
+figure here estimates screening performance.
+
+\textbf{The early-stage subgroup analysis is exploratory and underpowered.}
+It rests on 21 cases, was specified post hoc rather than in advance, and is
+reported without formal inferential comparison. Its role in the argument is
+to illustrate a case-mix imbalance that is established independently by
+arithmetic---107 of 128 cases at stages 3--5---and not to estimate
+early-stage performance, which 21 cases cannot support. The direction is
+consistent across configurations, but the magnitude should be treated as
+hypothesis-generating and requires confirmation in a larger, prospectively
+defined early-stage cohort. The same caution applies to the standardised
+quantities in Section~\ref{sec:bid}, whose weights concentrate on that
+stratum.
+
+Four records are internally
 contradictory, and while deleting them changes nothing, trusting their staging
 instead costs the low-cost configuration up to 0.0241 ROC-AUC---so this
 limitation is half-answered, not answered. The data are cross-sectional, so
@@ -990,24 +1140,30 @@ unaided, and is the larger effect. And the two releases the literature treats
 as independent cohorts share their patients record-for-record, so published
 cross-dataset validations between them measure resubstitution.
 
-Transferring the models unchanged to an independent cohort then shows what
-those mechanisms cost: discrimination of 0.997 becomes 0.70, and calibration
-fails badly enough to refer nearly everyone. That cohort is small and
-differently constituted, so it bounds the direction rather than the
-magnitude---but the direction is the point.
+Transferring the models unchanged to an independent cohort, as a
+transportability probe rather than a definitive external validation, then
+indicates what those mechanisms may cost: discrimination of 0.997 becomes
+0.70, and calibration fails badly enough to refer nearly everyone. With 20
+cases from a critical-care population, that difference reflects some
+combination of small-sample uncertainty, case mix, measurement definition,
+missingness, clinical setting and distribution shift as well as any internal
+optimism, and the probe cannot separate them. It bounds the direction rather
+than the magnitude---but the direction is the point.
 
 What the work supports is a methodological claim in two parts. About this
 benchmark: its reported numbers are largely explained by properties of the
 data, the largest of which is rarely examined and the least visible of which
 invalidates the cross-dataset validations that would otherwise be its
-strongest evidence; and what remains does not transfer. About method: all
-three mechanisms were found by checks that can be run \emph{before} any model
-is fitted---declare and enforce prohibited columns, inspect the case mix and
+strongest evidence; and what remains did not transfer to the one independent
+cohort we could test. About method: all three mechanisms were found by checks
+that can be run \emph{before} any model is fitted---declare and enforce prohibited columns, inspect the case mix and
 univariate separability, and verify at record level that a validation cohort
 is a different set of patients. We add a fourth question worth asking of any
 benchmark before trusting it: does modelling beat the best single column, and
 does the task need more than a fraction of the data? On this benchmark the
-answers are barely and no.
+answers are barely and no. Section~\ref{sec:synthetic} sets out how the same
+safeguards, and the two memorisation-specific checks we do not implement,
+would apply to synthetic tabular and synthetic patient data.
 
 Prospective validation in a genuine screening series would be required before
 any clinical interpretation is warranted, and no dataset examined here can
