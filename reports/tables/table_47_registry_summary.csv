@@ -1,0 +1,7 @@
+leakage_category,n_variables,n_excluded,variables
+legitimate_pre_index,11,0,"age, al, ba, bgr, htn, pc, pcc, pe, sg, sod, wbcc"
+uncertain_provenance,8,0,"appet, bp (Diastolic), bp limit, cad, dm, pot, rbc, su"
+consequence_of_advanced_disease,4,0,"ane, hemo, pcv, rbcc"
+deterministic_outcome_derivative,2,2,"grf, stage"
+incorporation_risk,2,0,"bu, sc"
+direct_outcome_copy,2,2,"affected, class"

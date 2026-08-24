@@ -116,12 +116,14 @@ which almost every method reports near-perfect accuracy has stopped
 discriminating between methods}, and the interesting question becomes what, in
 the data, produces the ceiling.
 
-A structured survey of prior work on this dataset and its parent release
-(Section~\ref{sec:priorwork}) finds every independently verified headline
-metric at or above 99\% accuracy, 9 of 13 studies coded as using serum
-creatinine or eGFR as model inputs, and exactly one with a validation cohort
-that is genuinely external. Such numbers are more often a property of the data
-than evidence of clinical usefulness.
+A targeted illustrative review of 13 studies using this dataset or its parent
+release (Section~\ref{sec:priorwork}) shows that such results exist in the
+published record: of the three studies we could verify from the source text,
+two report headline accuracy at or above 99\%, and one reports 99.5\% after
+merging the two releases into a single training set. The review is not
+systematic and supports no claim about how common these practices are. Its
+purpose here is to establish that the failure modes we go on to characterise
+are not hypothetical.
 
 This paper began as an ordinary applied study of whether inexpensive
 variables---history, examination, a urine dipstick---could predict CKD status.
@@ -160,7 +162,7 @@ fired, and the investigation into why became the study.
 \end{enumerate}
 
 %==============================================================================
-\section{Related Work and Prior Results on This Benchmark}
+\section{Related Work: A Targeted Illustrative Review}
 \label{sec:priorwork}
 
 Recent surveys of machine learning for CKD~\cite{kabir2026} note that the
@@ -169,14 +171,25 @@ include serum creatinine or eGFR as inputs---a practice Kabir \emph{et al.}
 describe as introducing ``information leakage and circular reasoning,'' since
 those biomarkers are themselves the clinical criteria defining the outcome.
 
-We assembled a structured survey of 13 studies using this dataset or its
-parent release, recording for each the dataset version, the reported headline
-metric, whether post-diagnosis columns were used, and the validation design.
-Every cell states how it was verified. Three studies were verified from full
-text or abstract; the remaining ten carry an explicit
-\texttt{todo\_hand\_check} flag because paywalls blocked verification, and
-their coding is \emph{attributed} to a published comparison
-table~\cite{kabir2026} rather than confirmed. Table~\ref{tab:lit} summarises.
+\textbf{This section is a targeted illustrative review, not a systematic
+one.} We state that plainly because the distinction bounds every claim we
+make about the literature. Studies were identified from the reference list of
+one recent survey~\cite{kabir2026} and from citation trails of the two
+dataset releases; there was no protocol-driven multi-database search, no
+independent double screening, and no attempt at exhaustive coverage. The
+sample is therefore sufficient to demonstrate that particular practices
+\emph{occur}, and insufficient to estimate how often they occur. We make no
+prevalence claim about the literature anywhere in this paper.
+
+Of the 13 studies examined, three could be verified from full text or
+abstract; the remaining ten sit behind paywalls we could not access, and
+their coding is \emph{attributed} to the published comparison table
+of~\cite{kabir2026} rather than independently confirmed. Consistent with the
+above, \textbf{the ten unverified studies support no quantitative statement
+in this paper}: every count we report is either over all 13 studies as a
+description
+of the sample we assembled, or restricted to the three verified studies, and
+Table~\ref{tab:lit} labels which is which.
 
 Among the verified studies, Islam \emph{et al.}~\cite{islam2023} report 99.16\%
 accuracy on the 2015 release with serum creatinine among the predictors and no
@@ -189,32 +202,96 @@ Section~\ref{sec:mech3}.
 
 % Source: reports/tables/table_26_prior_work_summary.csv
 \begin{table}[t]
-\caption{Structured survey of prior work on this benchmark ($N=13$)}
+\caption{Targeted illustrative review ($N=13$ studies examined). Rows marked
+\emph{attributed} rest on a published comparison table~\cite{kabir2026}, not
+on our own reading, and support no quantitative claim. This is not a
+systematic sample; no prevalence should be inferred from it.}
 \label{tab:lit}
 \centering
-\begin{tabular}{lr}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrl}
 \toprule
-\tabhead{Quantity} & \tabhead{Value} \\
+\tabhead{Quantity} & \tabhead{Value} & \tabhead{Basis} \\
 \midrule
-Studies surveyed & 13 \\
-Independently verified by us & 3 \\
-Awaiting hand verification (paywalled) & 10 \\
-Verified headline metrics $\geq 0.99$ & 2 of 3 \\
-Coded as using serum creatinine or eGFR & 9 \\
-Using the 2020 release or a merge of both & 4 \\
-Cross-validating between the two releases & 3 \\
-\textbf{With a genuinely external cohort} & \textbf{1} \\
+Studies examined & 13 & our sample \\
+Independently verified & 3 & full text / abstract \\
+Not accessible (paywalled) & 10 & --- \\
+Verified headline metrics $\geq 0.99$ & 2 of 3 & verified only \\
+Coded as using creatinine or eGFR & 9 & attributed \\
+Using the 2020 release or a merge & 4 & attributed \\
+Cross-validating between the releases & 3 & attributed \\
+With a genuinely external cohort & 1 & verified \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The survey is a targeted sample seeded from one paper's reference list. It is
-sufficient to establish that near-perfect results and cross-release validation
-occur; it is not sufficient to estimate how often, and we do not claim
-otherwise.
+The purpose of the table is existence, not prevalence: it establishes that
+studies reporting near-ceiling accuracy on this benchmark, studies using
+creatinine or eGFR as inputs, and studies validating across the two releases
+all exist in the published record --- the last of which
+Section~\ref{sec:mech3} shows to be invalid. How common each practice is
+would require the systematic review this section is not.
 
 %==============================================================================
-\section{Data}
+\section{Intended Use, Data, and Provenance}
+\label{sec:data}
+
+\subsection{Intended use, and why this dataset cannot fix one}
+\label{sec:intendeduse}
+
+A prediction model is interpretable only against a stated intended use.
+Table~\ref{tab:intendeduse} sets out the use this benchmark is usually taken
+to support, and what the released file actually permits.
+
+% Source: authors' specification; no computed values.
+\begin{table}[t]
+\caption{Intended-use specification. The right column records what the
+released data can support, which is in several places less than the
+benchmark's common framing assumes.}
+\label{tab:intendeduse}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{2.35cm}p{5.5cm}}
+\toprule
+\tabhead{Element} & \tabhead{Specification / what the data permit} \\
+\midrule
+Population & Adults assessed for suspected kidney disease. The release
+documents no eligibility criteria, recruitment window or consecutive
+sampling, so the population is not reconstructible. \\
+Setting & Hospital-based, single centre. Not a community or primary-care
+series. \\
+Index time & \emph{Not identifiable.} No timestamps exist; the file gives no
+ordering between examination, dipstick, venepuncture and diagnosis. \\
+Information at index & Cannot be established per patient, for the same
+reason. Availability is therefore assigned per \emph{variable} by clinical
+reasoning (Table~\ref{tab:leakage}), not observed. \\
+Outcome & \texttt{class} $\in$ \{ckd, notckd\}, as labelled. Chronicity ---
+required by the KDIGO definition~\cite{kdigo2024} --- cannot be verified
+from a single cross-sectional record. \\
+Task type & \emph{Ambiguous.} Because index time is unidentifiable and
+diagnostic measurements are contemporaneous with labelling, the task is
+better described as retrospective case--control discrimination than as
+screening, diagnosis or prognosis. \\
+Decision supported & None established. No referral, treatment or triage
+decision can be attached to a prediction whose index time is unknown. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three of those rows are blank in a way that matters. Without an index time,
+``available at prediction time'' cannot be verified per patient; without
+chronicity, the outcome is not the KDIGO construct; and without a defined
+decision, calibration and thresholds have no operating context. We therefore
+do not treat this work as a prediction-model development study, and no result
+in it should be read as one.
+
+\textbf{This paper is a methodological benchmark audit.} Its object is the
+measurement process: what properties of the released data explain the
+performance reported on it, and what checks would have revealed those
+properties in advance. Where models are fitted, they are instruments for
+probing the data, not candidate clinical tools.
 
 \subsection{The analysed release}
 
@@ -249,6 +326,32 @@ release~\cite{uci2015}, documented as an Indian hospital. We report the
 measurement and take no view on how the discrepancy arose; readers should
 treat the stated site, country and year as unverified. No claim in this paper
 rests on them.
+
+\subsection{Feature-availability and leakage taxonomy}
+\label{sec:taxonomy}
+
+Because index time is unidentifiable per patient
+(Section~\ref{sec:intendeduse}), availability is assigned per variable and
+recorded declaratively. \texttt{data/feature\_registry.csv} holds, for each
+of the 29 columns, its leakage category, availability at the proposed index
+time, whether it participates in constructing or staging the outcome, its
+cost tier, the configurations it may enter, the evidence for the
+classification, and an uncertainty flag. The feature configurations used in
+every experiment are \emph{derived} from that registry rather than
+maintained beside it, and a test asserts the derivation reproduces the
+declared configurations exactly, so a classification cannot drift from the
+configuration depending on it.
+
+The taxonomy separates categories that are often conflated
+(Table~\ref{tab:leakage}). Two are barred outright. Two more are admissible
+but carry interpretation caveats that the manuscript discloses wherever they
+matter: \emph{incorporation risk}, where a legitimate contemporaneous
+measurement is also an input to the diagnostic criterion, and
+\emph{consequence of advanced disease}, where a variable is real and
+measurable but derives its discriminative value from severity rather than
+from early detectability.
+
+\input{generated/leakage_taxonomy}
 
 \subsection{Prohibited columns}
 
@@ -299,11 +402,22 @@ its own subset.
 
 \subsection{Validation design}
 
-Models are evaluated under 5-fold outer, 4-fold inner nested stratified
-cross-validation repeated 5 times, giving 25 independent outer test sets and
-108{,}000 out-of-fold predictions. The nested design is used because selecting
-hyper-parameters and estimating performance on the same folds is a known
-source of optimism~\cite{varma2006}. Six model families are compared: a
+\textbf{The effective sample is 200 unique patients.} Models are evaluated
+under 5-fold outer, 4-fold inner nested stratified cross-validation repeated
+5 times. This yields 25 outer test folds, but these are five repartitions of
+the same 200 patients: each patient is evaluated exactly once per repeat, so
+the design produces \emph{5 out-of-fold evaluations per patient}, not 25
+independent test sets. Repeated evaluations of the same individuals do not
+increase the effective sample size, and no interval reported here treats them
+as though they did. Per-patient probabilities are averaged across repeats
+before any metric is computed, so each patient contributes one value; the
+repeats reduce partition noise, not sampling uncertainty. Across the full
+grid of configurations, models and calibration methods the pipeline stores
+108{,}000 prediction rows, which are repeated evaluations of these 200
+patients and are reported only as an artefact size.
+
+The nested design is used because selecting hyper-parameters and estimating
+performance on the same folds is a known source of optimism~\cite{varma2006}. Six model families are compared: a
 prevalence dummy, penalised logistic regression, random forest, RBF support
 vector machine, XGBoost, and an explainable boosting machine
 (EBM)~\cite{nori2019} configured as a pure additive model. Imputation, scaling, hyper-parameter selection,
@@ -429,25 +543,50 @@ concentration are \emph{consequences} of established kidney disease; they are
 precisely the features absent in the patients a screening programme most needs
 to identify.
 
-Restricting to early CKD (s1--s2) versus non-CKD, sensitivity at the
-prespecified threshold falls from 0.969 to 0.905 for the low-cost
-configuration and from 0.891 to 0.762 for the clinical-only configuration
-(Fig.~\ref{fig:spectrum}).
+Table~\ref{tab:subgroup} reports stage-specific performance with stratified
+patient-level bootstrap intervals.
+
+% Source: reports/tables/table_48_subgroup_metrics_ci.csv
+\begin{table}[t]
+\caption{Stage-specific performance, low-cost configuration (SVM, isotonic),
+with 95\% bootstrap intervals. \textbf{Exploratory and post hoc}; the
+early-stage subgroup contains 21 cases. Intervals overlap substantially, so
+no subgroup difference is statistically resolved.}
+\label{tab:subgroup}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+\tabhead{Subgroup} & \tabhead{Cases} & \tabhead{ROC-AUC (95\% CI)} &
+\tabhead{Sensitivity (95\% CI)} \\
+\midrule
+All patients      & 128 & 0.993 (0.983--1.000) & 0.969 (0.937--0.992) \\
+Early, s1--s2     &  21 & 0.983 (0.954--1.000) & 0.905 (0.762--1.000) \\
+Moderate, s3      &  31 & 1.000 (1.000--1.000) & 1.000 (1.000--1.000) \\
+Advanced, s4--s5  &  76 & 0.993 (0.979--1.000) & 0.974 (0.934--1.000) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \textbf{These early-stage figures are exploratory and must not be read as
-estimates.} The subgroup contains \textbf{21 cases}, the analysis was defined
-post hoc after the ceiling was observed rather than prespecified, and no
-formal comparison is made or implied: with 21 cases the confidence interval
-on any subgroup sensitivity spans a large part of the achievable range, and a
-difference of the size reported would not survive a demand for statistical
-significance. We report the numbers as \emph{hypothesis-generating} for three
-reasons: the direction is consistent across every cheaper configuration, the
-underlying case-mix imbalance (107 of 128 cases at s3--s5) is an arithmetic
-fact about the sample rather than an inference, and omitting the analysis
-would leave the aggregate figures looking more like screening performance
-than they are. Confirmation requires a larger, prospectively defined
-early-stage cohort. We draw no causal conclusion and make no claim that the
-effect size generalises beyond this sample.
+estimates.} The subgroup contains \textbf{21 cases}; the analysis was defined
+post hoc after the ceiling was observed; and, as the intervals now make
+explicit, \emph{the apparent decline is not statistically resolved}. Low-cost
+sensitivity is 0.905 (0.762--1.000) in the early subgroup against 0.969
+(0.937--0.992) overall --- intervals that overlap across most of their range.
+The point estimates fall in the direction the case-mix argument predicts, and
+they do so consistently across the cheaper configurations, but with 21 cases
+this design cannot distinguish that from sampling variation.
+
+We report the analysis as \emph{hypothesis-generating} for three reasons: the
+direction is consistent across configurations; the underlying case-mix
+imbalance (107 of 128 cases at s3--s5) is an arithmetic fact about the sample
+rather than an inference, and does not depend on this subgroup analysis at
+all; and omitting it would leave the aggregate figures looking more like
+screening performance than they are. Confirmation requires a larger,
+prospectively defined early-stage cohort. We draw no causal conclusion and
+make no claim that the effect size generalises beyond this sample.
 
 \begin{figure*}[t]
 \centering
@@ -476,8 +615,7 @@ They do not. Applying the gate of Section~\ref{sec:gate}
 
 \begin{itemize}
   \item \textbf{All 200} patients match into the 2015 release; the maximum
-        bipartite match fraction is \textbf{1.000}, against a permutation null
-        of $\mathbf{0.003 \pm 0.003}$ (maximum 0.015 over 200 shuffles).
+        bipartite match fraction is \textbf{1.000}.
   \item \textbf{187 of 200} patients are compatible with exactly \emph{one}
         record; the maximum anywhere is two.
   \item Across those 187 uniquely pinned pairs, \textbf{ten categorical
@@ -490,6 +628,44 @@ They do not. Applying the gate of Section~\ref{sec:gate}
         $1\!\leftrightarrow\!$poor.
 \end{itemize}
 
+\textbf{Choosing a null that is hard to beat.} Independent column permutation
+destroys every cross-variable relationship, so beating it establishes only
+that candidate records are internally coherent; it yields
+$0.003 \pm 0.004$. We therefore added a stricter null: within each outcome
+stratum we fit a Gaussian copula to the candidate ranks, draw synthetic
+records, and map them back through the empirical marginals, producing a
+cohort with the right marginal distributions \emph{and} approximately the
+right dependence structure but no correspondence to any real patient. That
+null yields $\mathbf{0.055 \pm 0.013}$ (maximum 0.105 over 100 draws), which
+the observed 1.000 exceeds by roughly 73 standard deviations
+(Fig.~\ref{fig:provsens}).
+
+We also record a null that \emph{cannot} be used, because the point is easy
+to get wrong: permuting whole candidate rows leaves the statistic exactly
+unchanged, since maximum bipartite matching depends only on the multiset of
+candidate records and not on their order. We verified this empirically
+(1.000 $\rightarrow$ 1.000) and report it as a property of the estimator
+rather than as evidence.
+
+\textbf{Sensitivity of the verdict.} Table~\ref{tab:provsens} reports the
+matching under varied conditions. Three results matter. Removing the outcome
+constraint entirely leaves the match fraction at 1.000 with 182 unique pins,
+so the correspondence is carried by the predictors, not by the label.
+Dropping each containment variable in turn never reduces the match fraction
+below 1.000, though unique pins fall to as few as 133, and removing the five
+variables most affected by the release's constant imputation
+(Section~\ref{sec:imputation}) still leaves 131 unique pins. Varying the
+numeric tolerance from exact containment to $10^{-2}$ changes unique pins
+only from 187 to 179.
+
+A fourth result is a caution about the statistic rather than the verdict.
+Matching on a four-variable subset also returns a match fraction of 1.000 ---
+but with \emph{zero} unique pins and up to 19 candidate partners per patient.
+Match fraction saturates once enough candidates are compatible with each
+record, so it is not sufficient evidence on its own. \emph{Uniqueness} is
+what carries the argument here, and it is uniqueness that the copula null and
+the held-out categorical agreement corroborate.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_r15_provenance_null.pdf}
@@ -500,12 +676,56 @@ variables that played no part in the matching.}
 \label{fig:prov}
 \end{figure}
 
-A coincidental alignment does not reproduce ten unused variables. The analysed
-file is a discretised subset re-release of the 2015 dataset. Of the 13
-surveyed studies, three validate across the two releases as though they were
-independent cohorts, and one merges them into a single training set before
-reporting accuracy. On this evidence those procedures evaluate models on their
-own training population.
+% Source: reports/tables/table_44_provenance_sensitivity.csv
+\begin{table}[t]
+\caption{Sensitivity of the record-level match. Match fraction saturates once
+several candidates are compatible with each record; \emph{unique pins} is the
+discriminating statistic.}
+\label{tab:provsens}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+\tabhead{Condition} & \tabhead{$k$} & \tabhead{Match} &
+\tabhead{Unique pins} \\
+\midrule
+Primary (outcome used)              & 13 & 1.000 & 187 \\
+Outcome excluded                    & 13 & 1.000 & 182 \\
+Imputation-affected removed         &  8 & 1.000 & 131 \\
+Leave-one-variable-out (range)      & 12 & 1.000 & 133--187 \\
+Tolerance $0$ to $10^{-2}$          & 13 & 1.000 & 179--187 \\
+Laboratory subset                   &  9 & 1.000 & 42 \\
+Cheap subset (saturated)            &  4 & 1.000 & 0 \\
+\midrule
+Negative control (synthetic)        & 13 & 0.005 & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_provenance_sensitivity.pdf}
+\caption{Left: match fraction under varied matching conditions, with the
+synthetic negative control in red. Right: the observed match against two
+nulls --- independent column permutation, and the stricter copula null that
+preserves marginals and correlations.}
+\label{fig:provsens}
+\end{figure}
+
+A coincidental alignment does not reproduce ten unused variables, survive the
+removal of any single variable, or arise in a cohort matched on marginals and
+correlations. We state the conclusion at the strength the evidence supports:
+\textbf{the data provide strong record-level evidence that the 2020 release is
+a discretised subset or re-release of patients represented in the 2015
+release}. We do not claim exact raw-value identity, which the discretisation
+makes untestable, and we have not contacted the repository maintainers, so
+nothing here is an officially confirmed provenance correction.
+
+Of the 13 studies examined in Section~\ref{sec:priorwork}, three validate
+across the two releases as though they were independent cohorts, and one
+merges them into a single training set before reporting accuracy. On this
+evidence those procedures evaluate models on their own training population.
 
 This is not a criticism of those authors. Nothing in either dataset's
 documentation indicates the overlap, and the present study registered the 2015
@@ -1175,7 +1395,8 @@ substitute for it.
 The complete pipeline, including the provenance gate as reusable
 dataset-agnostic machinery, is available in the accompanying repository. One
 master seed derives every fold and model seed; the raw file is checksummed on
-every load and never modified; all 108{,}000 out-of-fold predictions are
+every load and never modified; all out-of-fold predictions---108{,}000 rows,
+being repeated evaluations of 200 unique patients across the full grid---are
 written to a single table from which every reported number is derived; and 416
 automated tests enforce the leakage, determinism and report-consistency
 guarantees, including the provenance gate and the external-cohort temporal

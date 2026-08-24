@@ -98,6 +98,61 @@ class LiftResult:
     lift_ci_high: float
 
 
+def nested_best_single_auc(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    n_splits: int = 5,
+    n_repeats: int = 5,
+    seed: int = 0,
+) -> tuple[float, dict[str, int]]:
+    """Out-of-fold AUC of a single-feature baseline selected *inside* folds.
+
+    Selecting the best column on the same data used to score it is optimistic
+    for the baseline, which makes any lift computed against it conservative.
+    That is the safe direction, but it is still a biased comparison. Here the
+    column and its orientation are chosen on the training part of each fold
+    and applied to the held-out part, so the baseline is scored honestly.
+
+    Returns the pooled out-of-fold AUC and how often each column was chosen,
+    the latter being a useful indication of how stable the baseline is.
+    """
+    from sklearn.model_selection import StratifiedKFold
+
+    per_patient: dict[int, list[float]] = {i: [] for i in range(len(y))}
+    chosen: dict[str, int] = {}
+    for repeat in range(n_repeats):
+        splitter = StratifiedKFold(n_splits=n_splits, shuffle=True,
+                                   random_state=seed + repeat)
+        for train_idx, test_idx in splitter.split(X, y):
+            best_name, best_auc, best_sign = "", 0.0, 1.0
+            for column in X.columns:
+                values = X[column].to_numpy(dtype=float)
+                ok = np.isfinite(values[train_idx])
+                if ok.sum() < 10 or len(np.unique(y[train_idx][ok])) < 2:
+                    continue
+                auc = roc_auc_score(y[train_idx][ok], values[train_idx][ok])
+                folded, sign = (auc, 1.0) if auc >= 0.5 else (1.0 - auc, -1.0)
+                if folded > best_auc:
+                    best_name, best_auc, best_sign = column, folded, sign
+            if not best_name:
+                continue
+            chosen[best_name] = chosen.get(best_name, 0) + 1
+            held = X[best_name].to_numpy(dtype=float)[test_idx] * best_sign
+            median = np.nanmedian(X[best_name].to_numpy(dtype=float)[train_idx])
+            held = np.where(np.isfinite(held), held, median * best_sign)
+            for pos, patient in enumerate(test_idx):
+                per_patient[int(patient)].append(float(held[pos]))
+
+    # Average each patient's baseline score across repeats, mirroring how the
+    # model's own out-of-fold probabilities are pooled.
+    scores = np.array([
+        np.mean(per_patient[i]) if per_patient[i] else np.nan
+        for i in range(len(y))
+    ])
+    ok = np.isfinite(scores)
+    return float(roc_auc_score(y[ok], scores[ok])), chosen
+
+
 def multivariable_lift(
     y: np.ndarray,
     model_prob: np.ndarray,

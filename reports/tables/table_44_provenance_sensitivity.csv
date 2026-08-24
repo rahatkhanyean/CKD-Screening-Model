@@ -1,0 +1,25 @@
+analysis,label,n_variables,outcome_used,match_fraction,n_unique_pins,rows_with_any_partner,mean_partners,median_partners,max_partners,dropped_variable,tolerance
+primary,"primary (all 13, outcome used)",13.0,True,1.0,187,200,1.065,1.0,2,,
+outcome_excluded,outcome excluded,13.0,False,1.0,182,200,1.095,1.0,3,,
+imputation_removed,imputation-affected variables removed,8.0,True,1.0,131,200,1.51,1.0,7,,
+feature_subset,"cheap subset (age, sg, al, su)",4.0,True,1.0,0,200,11.625,12.0,19,,
+feature_subset,laboratory subset,9.0,True,1.0,42,200,5.555,5.0,16,,
+negative_control,negative control: marginal-preserving synthetic,13.0,True,0.005,1,1,0.005,0.0,1,,
+leave_one_variable_out,without_age,12.0,True,1.0,133,200,1.445,1.0,4,age,
+leave_one_variable_out,without_sg,12.0,True,1.0,179,200,1.125,1.0,3,sg,
+leave_one_variable_out,without_al,12.0,True,1.0,171,200,1.17,1.0,3,al,
+leave_one_variable_out,without_su,12.0,True,1.0,180,200,1.1,1.0,2,su,
+leave_one_variable_out,without_bgr,12.0,True,1.0,159,200,1.23,1.0,3,bgr,
+leave_one_variable_out,without_bu,12.0,True,1.0,170,200,1.16,1.0,3,bu,
+leave_one_variable_out,without_sc,12.0,True,1.0,181,200,1.095,1.0,2,sc,
+leave_one_variable_out,without_sod,12.0,True,1.0,172,200,1.145,1.0,3,sod,
+leave_one_variable_out,without_pot,12.0,True,1.0,187,200,1.065,1.0,2,pot,
+leave_one_variable_out,without_hemo,12.0,True,1.0,179,200,1.105,1.0,2,hemo,
+leave_one_variable_out,without_pcv,12.0,True,1.0,184,200,1.08,1.0,2,pcv,
+leave_one_variable_out,without_wbcc,12.0,True,1.0,185,200,1.075,1.0,2,wbcc,
+leave_one_variable_out,without_rbcc,12.0,True,1.0,184,200,1.085,1.0,3,rbcc,
+tolerance_sensitivity,,,,1.0,187,200,1.065,,2,,0.0
+tolerance_sensitivity,,,,1.0,187,200,1.065,,2,,1e-09
+tolerance_sensitivity,,,,1.0,187,200,1.065,,2,,1e-06
+tolerance_sensitivity,,,,1.0,187,200,1.065,,2,,0.001
+tolerance_sensitivity,,,,1.0,179,200,1.125,,3,,0.01
