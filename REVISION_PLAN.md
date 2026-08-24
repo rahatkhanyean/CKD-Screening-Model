@@ -38,18 +38,25 @@ report can be checked against it.
 
 ---
 
-## Defects found in Phase 1 (before any edit)
+## Defect register
 
-| # | Defect | Location | Severity |
-|---|---|---|---|
-| D1 | "25 **independent** outer test sets" — the 25 outer test sets are 5 repartitions of the same 200 patients; each patient is evaluated 5 times. They are not independent samples. | `ieee_paper.tex` §IV-C | **High** — misstates the effective sample |
-| D2 | "108,000 out-of-fold predictions" presented in Methods and Reproducibility without stating these are repeated evaluations of 200 unique patients | `ieee_paper.tex` §IV-C, Reproducibility | **High** — invites reading as sample size |
-| D3 | Multivariable lift selects the best single predictor on the same data used to evaluate the model, with no nested selection | `informativeness.py::best_single_predictor` | **Medium** — biases the *baseline* upward, so reported lift is conservative; still needs correcting |
-| D4 | Whole-procedure bootstrap uses 200 resamples | `15_procedure_bootstrap.py` | **Medium** — brief requests ≥1000 |
-| D5 | Provenance verdict rests on one matching configuration; no leave-one-variable-out, no outcome-excluded matching, no tolerance sensitivity | `provenance.py` | **High** — key contribution under-defended |
-| D6 | Subgroup metrics reported without confidence intervals | `table_21_spectrum_analysis.csv` | **Medium** |
-| D7 | Feature configurations hand-maintained in `configs.py`, not derived from a leakage registry | `features/configs.py` | **Medium** |
-| D8 | Diagnostic protocol thresholds calibrated on one dataset, presented with named thresholds | §VI | **Medium** |
+D1–D8 were found in Phase 1, before any edit. D9–D12 were found in the
+final QA pass, after the substantive revision was otherwise complete.
+
+| # | Defect | Location | Severity | Resolution |
+|---|---|---|---|---|
+| D1 | "25 **independent** outer test sets" — the 25 outer test sets are 5 repartitions of the same 200 patients; each patient is evaluated 5 times. They are not independent samples. | `ieee_paper.tex` §IV-C | **High** — misstates the effective sample | **Resolved** — §IV-C rewritten; guarded by `test_effective_sample_language` |
+| D2 | "108,000 out-of-fold predictions" presented in Methods and Reproducibility without stating these are repeated evaluations of 200 unique patients | `ieee_paper.tex` §IV-C, Reproducibility | **High** — invites reading as sample size | **Resolved** — relabelled repeated evaluations of 200 patients in Methods and Reproducibility |
+| D3 | Multivariable lift selects the best single predictor on the same data used to evaluate the model, with no nested selection | `informativeness.py::best_single_predictor` | **Medium** — biases the *baseline* upward, so reported lift is conservative; still needs correcting | **Resolved** — `nested_best_single_auc`; lift unchanged to 4 dp because selection is stable |
+| D4 | Whole-procedure bootstrap uses 200 resamples | `15_procedure_bootstrap.py` | **Medium** — brief requests ≥1000 | **Not resolved** — 200 retained; convergence analysis (`table_51`) added and the limitation stated |
+| D5 | Provenance verdict rests on one matching configuration; no leave-one-variable-out, no outcome-excluded matching, no tolerance sensitivity | `provenance.py` | **High** — key contribution under-defended | **Resolved** — six sensitivity analyses plus a copula null (`table_44`–`table_46`) |
+| D6 | Subgroup metrics reported without confidence intervals | `table_21_spectrum_analysis.csv` | **Medium** | **Resolved** — `table_48` reports stratified bootstrap intervals |
+| D7 | Feature configurations hand-maintained in `configs.py`, not derived from a leakage registry | `features/configs.py` | **Medium** | **Resolved** — `data/feature_registry.csv`; 18 tests assert exact agreement with `configs.py` |
+| D8 | Diagnostic protocol thresholds calibrated on one dataset, presented with named thresholds | §VI | **Medium** | **Partly** — thresholds moved to the supplement and labelled candidate; multi-dataset calibration not done |
+| D9 | `paper/figures/` — the directory the LaTeX build reads — was populated by hand; no stage refreshed it, so a re-run could build the manuscript from a stale figure | `reproduce.py`, `Makefile` | **High** — defeats the reproducibility claim silently | **Resolved** — `sync_figures()` and a `syncfigs` target, run before either build |
+| D10 | Fig. 1 drew an internal label and an interpretive claim inside the graphic, stronger than the manuscript's own wording | `scripts/04_evaluate.py` | **Medium** | **Resolved** — retitled at source; new test reads figure text with `pdftotext` |
+| D11 | Conclusion asserted case mix "is the larger effect" and that the releases match "record-for-record", both retracted in §V-D and §V-E | `ieee_paper.tex` §Conclusion | **High** — the paper contradicted itself | **Resolved** — rewritten; `TestRetractedClaimsStayRetracted` guards seven phrases |
+| D12 | Supplement spilled two lines onto a blank third page | `paper/supplement.tex` | **Low** | **Resolved** — two paragraphs tightened at source |
 
 ---
 

@@ -26,6 +26,10 @@
 
 \graphicspath{{figures/}}
 
+% Values quoted inline, generated from the result CSVs by
+% scripts/24_make_latex_tables.py so that text cannot drift from data.
+\input{generated/numbers}
+
 % Compact, consistent table type.
 \newcommand{\tabhead}[1]{\textbf{#1}}
 \renewcommand{\arraystretch}{1.15}
@@ -50,45 +54,54 @@ email@institution.edu}
 
 %==============================================================================
 \begin{abstract}
-Machine-learning studies on the public UCI chronic kidney disease (CKD)
-benchmarks routinely report accuracy at or near 100\%. We ask what produces
-those numbers. Under repeated nested cross-validation with programmatically
-enforced leakage control, we identify and quantify three distinct mechanisms,
-none of which is predictive ability. First, \emph{target leakage}: the
-released file contains an exact copy of the outcome, a post-diagnosis stage
-label, and the diagnostic eGFR value; including them takes every feature
-configuration to ROC-AUC 1.000. Second, and larger, \emph{case-mix
-composition}: with every prohibited column removed, models still separate all
-200 patients out of fold, because 84\% of cases carry stage 3--5 disease and
-haemoglobin alone reaches univariate ROC-AUC 0.968; in an exploratory, post
-hoc and statistically underpowered subgroup of the 21 early-stage cases,
-sensitivity falls from 0.969 to 0.905, a hypothesis-generating signal
-requiring confirmation in a larger prospectively defined cohort. Third, and
-least visible,
-\emph{pseudo-external validation}: a record-level provenance check shows that
-the 2015 and 2020 UCI releases, treated in the literature as independent
-cohorts, share their patients. All 200 patients of the 2020 release match
-into the 2015 release (maximum bipartite match fraction 1.000 against a
-permutation null of $0.003 \pm 0.003$), 187 of them uniquely, with zero
-contradictions across ten categorical variables that took no part in the
-matching. Of 13 surveyed studies, three validate across these releases as
-though independent and one merges them into a single training set.
-Recovering the original measurements further shows that the published
-discretisation destroys 0.266 ROC-AUC of univariate signal in serum
-creatinine while changing no multivariable conclusion, and that 339 missing
-cells were silently filled with constants whose absence is strongly
-outcome-associated. Finally, as a \emph{transportability probe} rather than a
-definitive external validation, we transfer the models unchanged to an
-independent critical-care cohort---the only registered source carrying the
-same measurements on different patients---where discrimination falls from
-0.997 to 0.70 (95\% CI 0.59--0.80) and Brier rises from 0.014 to 0.42. With
-20 cases in a markedly different clinical setting, this difference cannot be
-attributed to internal optimism alone: small-sample uncertainty, case mix,
-feature definition, missingness and genuine distribution shift all plausibly
-contribute. We release the full pipeline, including a reusable provenance
-gate that blocks non-independent cohorts from supporting external claims, and
-a diagnostic protocol that would have flagged this benchmark before any model
-was fitted.
+\textbf{Background.} Machine-learning studies using the public UCI chronic
+kidney disease (CKD) benchmarks frequently report accuracy at or near 100\%.
+Whether such results reflect transportable predictive ability has not been
+systematically examined.
+\textbf{Objective.} To audit what properties of these benchmarks produce
+near-ceiling performance, and to identify checks that would reveal them
+before a model is fitted.
+\textbf{Methods.} We analysed the 2020 UCI release: \textbf{200 unique
+patients} (128 CKD), the effective sample throughout. Models were evaluated
+by 5-fold outer, 4-fold inner nested cross-validation repeated 5 times,
+giving five out-of-fold evaluations per patient; repeated evaluations were
+averaged per patient and are not treated as independent observations.
+Prohibited columns were blocked by guards that raise at fit and transform.
+Uncertainty is reported from a whole-procedure bootstrap that re-runs model
+selection and calibration within each resample.
+\textbf{Results.} Three distinct pathways drive performance toward the
+ceiling. (i) \emph{Direct leakage}: the file contains an exact outcome copy,
+a post-diagnosis stage label and the diagnostic eGFR value; including them
+takes every configuration to ROC-AUC 1.000. (ii) \emph{Case composition}:
+with all prohibited columns removed, discrimination remains near 1.000, and
+84\% of cases carry stage 3--5 disease with haemoglobin alone reaching
+univariate ROC-AUC 0.968. Removing variables that enter the diagnostic
+criterion, or that are consequences of advanced disease, does not restore
+headroom (0.991--1.000), so no single pathway is necessary; case composition
+appears principal but cannot be cleanly separated from incorporation and
+feature redundancy. (iii) \emph{Non-independent evaluation}: a record-level
+check finds all 200 patients of the 2020 release matching into the 2015
+release, 187 uniquely, with zero contradictions across ten variables not used
+in matching, against a correlation-preserving null of $\NullCopulaMean \pm \NullCopulaSD$. The
+data provide strong record-level evidence that the 2020 release is a
+discretised subset or re-release of patients in the 2015 release.
+\textbf{Limitations.} An early-stage subgroup analysis (21 cases) is
+exploratory, post hoc and underpowered: sensitivity 0.905 (95\% CI
+0.762--1.000) versus 0.969 (0.937--0.992) overall, intervals that overlap and
+do not resolve a difference. A transfer to an independent critical-care
+cohort (20 cases) is an exploratory transportability stress test, not an
+external validation; discrimination there was 0.70 (95\% CI 0.59--0.80), a
+difference attributable to small-sample uncertainty, case mix, feature
+definition, missingness, clinical setting and distribution shift as well as
+to any internal optimism, which this design cannot separate. Our review of
+prior work is targeted and illustrative, not systematic.
+\textbf{Conclusion.} Near-ceiling performance on this benchmark reflects a
+combination of invalid information pathways, non-independent evaluation and
+unusually separable case composition, rather than demonstrated transportable
+early-detection performance. High internal discrimination here is real but of
+limited clinical difficulty and unknown transportability. We release the
+pipeline, a reusable provenance gate, and a proof-of-concept pre-modelling
+audit framework whose thresholds are not yet validated across benchmarks.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -600,6 +613,46 @@ no multivariable learning is required to reach the ceiling.}
 \label{fig:spectrum}
 \end{figure*}
 
+\subsection{Which information pathway produces the ceiling?}
+\label{sec:decomposition}
+
+Case mix, incorporation of diagnostic inputs, and consequences of advanced
+disease are distinct explanations for near-perfect discrimination, and the
+registry (Section~\ref{sec:taxonomy}) makes them separable. We re-ran the
+nested design after removing each category in turn
+(Table~\ref{tab:restricted}).
+
+\input{generated/restricted_featuresets}
+
+Two candidate explanations are ruled out. Removing the variables that enter
+the diagnostic criterion --- serum creatinine and blood urea --- leaves
+discrimination unchanged at 1.000, so \emph{incorporation is not what
+produces the ceiling}. Removing the consequences of advanced disease ---
+haemoglobin, packed cell volume, red-cell count and the anaemia flag ---
+costs 0.002. Removing both categories together still leaves 0.991
+(0.975--1.000), and a set restricted to the 11 variables the registry marks
+as plausibly available before a laboratory work-up reaches 0.994
+(0.986--0.999).
+
+The ceiling therefore survives the removal of both pathways, which is
+informative but is not a clean decomposition. These feature sets are heavily
+redundant: dropping haemoglobin leaves packed cell volume and red-cell count
+correlated with it, and dropping creatinine leaves urine specific gravity and
+albuminuria. What the experiment establishes is that no single information
+pathway is necessary for near-perfect discrimination on this sample.
+Accordingly we state the conclusion as: \textbf{case composition appears to be
+the principal explanation for valid models reaching the ceiling, but its
+contribution cannot be cleanly separated from diagnostic incorporation and
+feature redundancy in this dataset.}
+
+We are also explicit about what this is \emph{not} evidence of. Reaching 0.99
+on these variables is real internal discrimination, not an artefact and not
+an absence of predictive ability. What the case-mix analysis questions is its
+clinical difficulty, relevance and transportability: separating patients with
+established stage 3--5 disease from comparatively healthy controls is a
+different and easier task than the early detection a screening instrument
+would perform.
+
 \subsection{Mechanism 3: pseudo-external validation}
 \label{sec:mech3}
 
@@ -631,13 +684,14 @@ They do not. Applying the gate of Section~\ref{sec:gate}
 \textbf{Choosing a null that is hard to beat.} Independent column permutation
 destroys every cross-variable relationship, so beating it establishes only
 that candidate records are internally coherent; it yields
-$0.003 \pm 0.004$. We therefore added a stricter null: within each outcome
+$\NullColumnMean \pm \NullColumnSD$. We therefore added a stricter null: within each outcome
 stratum we fit a Gaussian copula to the candidate ranks, draw synthetic
 records, and map them back through the empirical marginals, producing a
 cohort with the right marginal distributions \emph{and} approximately the
 right dependence structure but no correspondence to any real patient. That
-null yields $\mathbf{0.055 \pm 0.013}$ (maximum 0.105 over 100 draws), which
-the observed 1.000 exceeds by roughly 73 standard deviations
+null yields $\mathbf{\NullCopulaMean \pm \NullCopulaSD}$
+(maximum \NullCopulaMax{} over \NullDraws{} draws), which the observed
+1.000 exceeds by roughly \NullCopulaSDDistance{} standard deviations
 (Fig.~\ref{fig:provsens}).
 
 We also record a null that \emph{cannot} be used, because the point is easy
@@ -842,11 +896,29 @@ variability introduced by model selection, tuning and calibration being
 re-made on a different sample. We removed that shortcut: for each resample the
 entire nested procedure is re-run from scratch, 200 times per cell.
 
-Within each resample the outer folds are formed over \emph{patients} rather
-than rows, so every copy of a duplicated patient stays on the same side of
-every split. Without that constraint a model would be evaluated on patients it
-had trained on---the failure this paper is about, and not excusable in its own
-methods.
+The procedure is specified as follows. The sampling unit is the
+\textbf{patient}, not the prediction; resampling is stratified on outcome to
+preserve the 64\% prevalence; within each resample the outer folds are formed
+over \emph{patients} rather than rows, so every copy of a duplicated patient
+stays on the same side of every split. Without that constraint a model would
+be evaluated on patients it had trained on --- the failure this paper is
+about, and not excusable in its own methods. Hyper-parameter selection and
+calibration are re-run inside every resample, which is the point of the
+exercise; intervals are percentile intervals; fold seeds derive
+deterministically from the master seed and the resample index; and failed
+resamples are counted rather than discarded silently (none failed).
+
+\textbf{Resample count and convergence.} Each resample costs a full nested
+cross-validation, and a 1{,}000-resample run proved computationally
+prohibitive on the available hardware within this revision. We therefore
+report 200 resamples per cell with an explicit convergence analysis
+(\texttt{table\_51}): drawing increasing subsets of the completed resamples,
+the lower interval endpoint for the low-cost SVM moves from 0.965 at 25
+resamples to 0.960 at 200, and its sampling standard deviation across
+repeated subsets falls to 0.003 by 175 resamples --- an order of magnitude
+below the interval width of 0.038. The interval is therefore stable at the
+count used, though a larger run would tighten it further; we record this as a
+computational limitation rather than a resolved question.
 
 % Source: reports/tables/table_38_procedure_bootstrap.csv
 \begin{table}[t]
@@ -1068,22 +1140,29 @@ warrants the caution this paper argues for, whatever the decomposition of
 that gap turns out to be.
 
 %==============================================================================
-\section{A Proposed Diagnostic for Benchmark Informativeness}
+\section{A Proof-of-Concept Pre-Modelling Audit Framework}
 \label{sec:bid}
 
 Every mechanism above was invisible in the number the literature reports.
 That is not an accident of this dataset. Discrimination answers ``how well
 did this model separate these patients?'' and says nothing about whether the
-dataset can distinguish good methods from bad ones. This section proposes
-three measurements that address the gap and applies them here.
+dataset can distinguish good methods from bad ones. This section describes
+three measurements that address the gap and reports them on this benchmark.
 
-We state the provenance of the idea plainly: none of the three components is
-new. Direct standardisation is routine in epidemiology, learning curves are
-long established, and comparing a model against a strong single-feature
-baseline is ordinary practice. What is proposed is their composition into a
-\emph{benchmark-level} check that can be run before a dataset is trusted,
-with reporting thresholds. Those thresholds are calibrated on one benchmark
-and are offered for discussion, not as standards.
+\textbf{Scope of the claim.} This is a proof of concept, not a validated
+instrument, and we make no universal recommendation. None of the three
+components is new: direct standardisation is routine in epidemiology,
+learning curves are long established, and comparing a model against a strong
+single-feature baseline is ordinary practice. What we contribute is their
+composition into a \emph{benchmark-level} check runnable before a dataset is
+trusted, together with an implementation and a demonstration on one
+benchmark. Evaluating whether the measurements separate informative from
+uninformative benchmarks would require applying them across several datasets
+with known properties and characterising false positives and false negatives;
+we have not done that, and until it is done no threshold should be treated as
+a criterion. Candidate flagging values are therefore reported in the
+supplement rather than the main text, and the results below are stated as
+quantities, not verdicts.
 
 \subsection{Multivariable lift}
 
@@ -1093,6 +1172,17 @@ with a paired patient-level bootstrap interval. The baseline is given the
 benefit of the doubt: a single raw column has no fitted direction, so its AUC
 is taken as $\max(\mathrm{AUC}, 1-\mathrm{AUC})$, which makes the lift
 smaller rather than larger.
+
+Choosing the best column on the same data used to score it would bias the
+baseline upward, so we also computed a version in which the column and its
+orientation are selected \emph{inside} training folds and applied to held-out
+data (\texttt{table\_50}). The two agree to four decimal places --- lift
+$+0.105$, $+0.026$ and $+0.032$ for the low-cost, laboratory and full valid
+sets respectively --- because selection is completely stable: a single column
+(\texttt{sg} for the low-cost set, \texttt{hemo} for the other two) is chosen
+in 100\% of folds, with no other column ever selected. Selection optimism is
+therefore a real concern in principle that turns out to be empty here, and
+the values below are reported from the nested procedure.
 
 % Source: reports/tables/table_43_bid_lift.csv
 \begin{table}[t]
@@ -1174,16 +1264,21 @@ standardising discrimination alone can give false reassurance, so an
 operating-point metric should be standardised alongside it. Which of the two
 moves more will depend on the dataset.
 
-Applied here, the protocol raises at least one flag for every configuration,
-and reaches that conclusion without reference to any of the three mechanisms
-that motivated it. Whether the thresholds transfer is an open question; the
-machinery is released so that others can find out.
+Taken together, the three measurements describe a benchmark on which
+modelling adds little over one raw column, a tenth of the training data
+suffices, and the operating point is case-mix sensitive --- and they do so
+without reference to any of the three mechanisms that motivated them, which
+is the property that would make such a check useful \emph{ex ante}. Whether
+these quantities separate informative from uninformative benchmarks in
+general is untested, and establishing it is the obvious next step; the
+implementation is released so that others can undertake it.
 
 %==============================================================================
 \section{Discussion}
 
 This study set out to measure one failure mode and found three. Each pushes
-measured performance toward 1.0, none is predictive ability, and they compound:
+measured performance toward 1.0 without being evidence of transportable
+predictive ability, and they compound:
 controlling any one leaves the others free to produce a near-perfect number.
 
 They are also ordered by how easy each is to miss. Leakage is visible in the
@@ -1356,8 +1451,11 @@ Machine-learning results on this benchmark cluster at the discrimination
 ceiling. We identify three mechanisms that put them there. Target leakage
 takes any configuration to ROC-AUC 1.000. Case mix---84\% of cases at stage
 3--5, with haemoglobin alone at 0.968---puts valid models at the ceiling
-unaided, and is the larger effect. And the two releases the literature treats
-as independent cohorts share their patients record-for-record, so published
+unaided, and appears to be the principal explanation, though its
+contribution cannot be cleanly separated from diagnostic incorporation and
+feature redundancy. And the two releases the literature treats as
+independent cohorts draw on the same patients---all 200 analysed records
+match into the 2015 release, 187 of them uniquely---so published
 cross-dataset validations between them measure resubstitution.
 
 Transferring the models unchanged to an independent cohort, as a
@@ -1372,7 +1470,7 @@ than the magnitude---but the direction is the point.
 
 What the work supports is a methodological claim in two parts. About this
 benchmark: its reported numbers are largely explained by properties of the
-data, the largest of which is rarely examined and the least visible of which
+data, one of which is rarely examined and the least visible of which
 invalidates the cross-dataset validations that would otherwise be its
 strongest evidence; and what remains did not transfer to the one independent
 cohort we could test. About method: all three mechanisms were found by checks
@@ -1397,7 +1495,7 @@ dataset-agnostic machinery, is available in the accompanying repository. One
 master seed derives every fold and model seed; the raw file is checksummed on
 every load and never modified; all out-of-fold predictions---108{,}000 rows,
 being repeated evaluations of 200 unique patients across the full grid---are
-written to a single table from which every reported number is derived; and 416
+written to a single table from which every reported number is derived; and \TestCount{}
 automated tests enforce the leakage, determinism and report-consistency
 guarantees, including the provenance gate and the external-cohort temporal
 guard. Environment and BLAS build are recorded in a lock file. Reporting

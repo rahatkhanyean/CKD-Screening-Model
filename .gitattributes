@@ -1,4 +1,16 @@
-# Byte-exact repository: no line-ending conversion, ever.
-# The raw dataset is SHA-256-checksummed on every load (guarantee G4);
-# autocrlf rewriting would silently break that guarantee on checkout.
-* -text
+# Generated result files are written by Python on whichever platform runs the
+# pipeline. Without normalisation a re-run on a different OS produces a diff of
+# thousands of lines in which no value has changed, which obscures real result
+# changes. Store text results with LF so that `git diff` after `reproduce.py`
+# shows only genuine differences.
+*.csv    text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.tex    text eol=lf
+*.py     text eol=lf
+*.txt    text eol=lf
+Makefile text eol=lf
+
+# Binary artefacts embed build timestamps; never try to merge or diff them.
+*.pdf    binary
+*.png    binary

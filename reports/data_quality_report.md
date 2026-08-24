@@ -5,7 +5,7 @@ directly from the source file; nothing is transcribed by hand.
 
 ## 1. Provenance and shape
 
-- Source file: `G:\My Drive\Projects\Healthcare research\data\raw\ckd-dataset-v2.csv`
+- Source file: `G:\My Drive\Projects\CKD Screening Model\data\raw\ckd-dataset-v2.csv`
 - SHA-256: `f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a`
 - Shape as read (header excluded): 202 rows x 29 columns
 - Shape after removing 2 metadata rows: 200 patients x 29 columns

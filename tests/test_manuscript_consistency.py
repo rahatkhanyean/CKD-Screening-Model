@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import hashlib
 import re
+import subprocess
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -33,6 +35,7 @@ from ckd.features.registry import prohibited_variables
 ROOT = project_root()
 TEX = ROOT / "paper" / "ieee_paper.tex"
 TABLES = ROOT / "reports" / "tables"
+FIGURES = ROOT / "paper" / "figures"
 
 #: SHA-256 of every input the manuscript's numbers depend on.
 EXPECTED_HASHES = {
@@ -114,12 +117,75 @@ class TestManuscriptNumbersMatchGeneratedResults:
         if len(control):
             assert f"{control['match_fraction'].iloc[0]:.3f}" in tex
 
-    def test_copula_null_reported(self, tex):
+    def test_copula_null_matches_its_source_exactly(self):
+        """The null statistics must equal what the CSV says, not merely
+        appear somewhere in the file.
+
+        The earlier version of this test asserted that the formatted mean
+        was a substring of the manuscript. It passed while the manuscript
+        quoted a stale 100-draw value, because an unrelated number in
+        Section VI happened to render as the same three digits. Substring
+        containment is not verification. These values are now generated
+        into paper/generated/numbers.tex, and this test compares that
+        fragment against the CSV it claims to come from.
+        """
         nulls = table("table_46_provenance_nulls.csv")
         column = "copula_preserving_correlations"
         if column not in nulls.columns:
             pytest.skip("copula null not generated")
-        assert f"{nulls[column].mean():.3f}" in tex
+
+        fragment = (ROOT / "paper" / "generated" / "numbers.tex")
+        assert fragment.is_file(), (
+            "numbers.tex missing; run scripts/24_make_latex_tables.py"
+        )
+        text = fragment.read_text(encoding="utf-8")
+        defined = dict(re.findall(
+            r"\\newcommand\{\\([A-Za-z]+)\}\{([^}]*)\}", text))
+
+        series = nulls[column]
+        expected = {
+            "NullDraws": str(len(nulls)),
+            "NullCopulaMean": f"{series.mean():.3f}",
+            "NullCopulaSD": f"{series.std(ddof=1):.3f}",
+            "NullCopulaMax": f"{series.max():.3f}",
+            "NullCopulaSDDistance":
+                f"{(1.0 - series.mean()) / series.std(ddof=1):.0f}",
+        }
+        for name, value in expected.items():
+            assert defined.get(name) == value, (
+                f"{name} is {defined.get(name)!r} but the CSV gives "
+                f"{value!r}; regenerate with scripts/24_make_latex_tables.py"
+            )
+
+    def test_test_count_is_generated_not_typed(self, tex):
+        """The Reproducibility statement's test count must be a macro.
+
+        It said 416 while the suite held 457. A count typed into prose goes
+        stale on the next commit that adds a test, so reproduce.py now writes
+        the pytest inventory as a result file and the manuscript quotes it.
+        """
+        assert "\\TestCount" in tex, (
+            "manuscript must quote the test count through the generated macro"
+        )
+        inventory = TABLES / "table_52_test_inventory.csv"
+        fragment = ROOT / "paper" / "generated" / "numbers.tex"
+        if not inventory.is_file():
+            pytest.skip("test inventory not written; run reproduce.py")
+        expected = str(int(pd.read_csv(inventory).iloc[0]["tests"]))
+        defined = dict(re.findall(
+            r"\\newcommand\{\\([A-Za-z]+)\}\{([^}]*)\}",
+            fragment.read_text(encoding="utf-8")))
+        assert defined.get("TestCount") == expected, (
+            f"TestCount is {defined.get('TestCount')!r} but the inventory "
+            f"records {expected!r}"
+        )
+
+    def test_manuscript_uses_the_generated_macros(self, tex):
+        """A literal would silently detach from the CSV again."""
+        assert "\\NullCopulaMean" in tex, (
+            "manuscript must quote the copula null through the generated "
+            "macro, not as a typed number"
+        )
 
     def test_subgroup_intervals_reported(self, tex):
         subgroup = table("table_48_subgroup_metrics_ci.csv")
@@ -155,6 +221,34 @@ class TestNoPlaceholdersOrInternalLabels:
     def test_no_internal_figure_labels(self, tex):
         """Internal names such as 'Figure R12' must not reach the reader."""
         assert not re.search(r"\bFig(?:ure)?\.?~?\s*R\d+", tex)
+    def test_no_internal_figure_labels_inside_the_graphics(self, tex):
+        """The same check, applied to what is actually *drawn*.
+
+        A figure can carry an internal label in its own embedded title even
+        when the LaTeX is clean, because the graphic is produced by a
+        different script. Visual inspection of the built PDF found exactly
+        that; this test is the regression guard.
+        """
+        if shutil.which("pdftotext") is None:
+            pytest.skip("pdftotext unavailable")
+        included = set(re.findall(r"\\includegraphics\[[^\]]*\]\{([^}]+)\}", tex))
+        assert included, "no figures found in the manuscript"
+        offenders = []
+        for name in sorted(included):
+            source = FIGURES / name
+            if not source.is_file():
+                continue
+            result = subprocess.run(
+                ["pdftotext", "-q", str(source), "-"],
+                capture_output=True, text=True,
+            )
+            if re.search(r"\bFig(?:ure)?\.?\s*[RE]\d+", result.stdout):
+                offenders.append(name)
+        assert not offenders, (
+            f"internal figure labels drawn inside {offenders}; the manuscript "
+            "numbers figures itself, so an embedded 'Figure R12' contradicts it"
+        )
+
 
     def test_author_placeholder_is_flagged_not_silent(self, tex):
         """A placeholder author block is permitted during revision but must
@@ -214,3 +308,112 @@ class TestLatexIntegrity:
     def test_no_hardcoded_section_cross_references(self, tex):
         hardcoded = re.findall(r"Section~[IVX]+-[A-Z]\b", tex)
         assert not hardcoded, f"hardcoded section refs: {hardcoded}"
+
+
+class TestRetractedClaimsStayRetracted:
+    """Phrases removed during revision because they outran the evidence.
+
+    Each was present in an earlier draft. A grep is the cheapest way to stop
+    a later edit from quietly reinstating one -- which is exactly how the
+    Conclusion came to contradict Sections V-D and V-E, undetected, until
+    the final page-by-page inspection of the built PDF.
+    """
+
+    RETRACTED = {
+        "record-for-record":
+            "claims exact raw-value identity, which discretisation makes "
+            "untestable; say 'discretised subset or re-release'",
+        "is the larger effect":
+            "asserts a decomposition the redundant feature sets cannot "
+            "support; say 'appears principal but cannot be cleanly separated'",
+        "no predictive ability":
+            "case-mix separability is not an absence of predictive ability",
+        "none of which is predictive ability":
+            "same overclaim, earlier wording",
+        "exactly identical patients":
+            "same overclaim as record-for-record",
+        "25 independent outer test sets":
+            "the 25 outer folds are five repartitions of the same 200 patients",
+        "definitively the largest":
+            "no valid quantitative decomposition supports a ranking",
+        "none is predictive ability":
+            "found in the Discussion after the same claim was removed "
+            "elsewhere; discrimination here is real, its transportability is "
+            "what is unknown",
+        "the largest of which is rarely examined":
+            "ranks the three mechanisms, which the redundant feature sets "
+            "cannot support",
+    }
+
+    def test_no_retracted_claim_reappears(self, tex):
+        lowered = tex.lower()
+        found = {phrase: why for phrase, why in self.RETRACTED.items()
+                 if phrase in lowered}
+        assert not found, (
+            "retracted claims have reappeared in the manuscript:\n"
+            + "\n".join(f"  {phrase!r}: {why}" for phrase, why in found.items())
+        )
+
+    def test_supplement_too(self):
+        text = (ROOT / "paper" / "supplement.tex").read_text(
+            encoding="utf-8").lower()
+        found = [p for p in self.RETRACTED if p in text]
+        assert not found, f"retracted claims in supplement: {found}"
+
+    def test_effective_sample_language(self, tex):
+        """The effective sample must be stated, not implied.
+
+        Defect D1: an earlier draft described the 25 outer test sets as
+        independent. They are five repartitions of the same 200 patients.
+        The correction is only durable if the manuscript states the unit
+        positively as well as avoiding the retracted phrase.
+        """
+        lowered = tex.lower()
+        assert "200 unique" in lowered, (
+            "manuscript must state the effective sample as 200 unique patients"
+        )
+        assert "five out-of-fold evaluations per patient" in lowered, (
+            "manuscript must say how many evaluations each patient receives"
+        )
+        # Wherever the artefact size appears it must be qualified.
+        for match in re.finditer(r"108,?000", tex):
+            window = tex[max(0, match.start() - 400): match.end() + 400].lower()
+            assert "200" in window and (
+                "repeated" in window or "evaluation" in window), (
+                "'108,000' appears without being identified as repeated "
+                "evaluations of 200 patients"
+            )
+
+
+class TestFiguresAreTypeset:
+    """Figures are typeset output, not console or markdown output.
+
+    Three of the six included figures shipped with literal markdown backticks
+    around variable names, because the same helper text served the internal
+    markdown report and the paper. Nothing caught it until the built PDF was
+    read page by page.
+    """
+
+    MARKUP = {
+        "`": "markdown code backticks",
+        "**": "markdown bold",
+        "\\texttt": "LaTeX markup in a raster/vector figure",
+    }
+
+    def test_no_markup_characters_in_figures(self, tex):
+        if shutil.which("pdftotext") is None:
+            pytest.skip("pdftotext unavailable")
+        included = set(re.findall(
+            r"\\includegraphics\[[^\]]*\]\{([^}]+)\}", tex))
+        offenders = {}
+        for name in sorted(included):
+            source = FIGURES / name
+            if not source.is_file():
+                continue
+            text = subprocess.run(
+                ["pdftotext", "-q", str(source), "-"],
+                capture_output=True, text=True).stdout
+            hits = [why for token, why in self.MARKUP.items() if token in text]
+            if hits:
+                offenders[name] = hits
+        assert not offenders, f"markup leaked into typeset figures: {offenders}"

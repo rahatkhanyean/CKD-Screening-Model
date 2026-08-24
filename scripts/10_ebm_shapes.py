@@ -239,7 +239,7 @@ def shapes_figure(shapes: pd.DataFrame, importance_order: list[str], fig_dir: Pa
                         sub["mean_contribution"] + sub["sd_contribution"],
                         alpha=0.2)
         ax.axhline(0.0, lw=0.8, ls="--", color="0.4")
-        ax.set_title(f"`{feature}`")
+        ax.set_title(feature, fontfamily="monospace")
         ax.set_xlabel("bin representative value")
         ax.set_ylabel("log-odds contribution")
     for ax in axes.flat[len(features):]:

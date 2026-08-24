@@ -748,12 +748,13 @@ def main() -> int:
     ax.grid(axis="y", visible=False)
 
     fig.suptitle(
-        "Figure R12. Case-mix analysis: why near-ceiling discrimination here is not "
-        "a screening result (EXPLORATORY)",
+        "Case-mix analysis: discrimination and sensitivity by disease severity "
+        "(EXPLORATORY)",
         y=1.03, fontsize=12, fontweight="bold",
     )
     fig.text(0.5, -0.04,
-             "`stage` is used only to define evaluation subgroups; it never entered any model "
+             "The stage variable is used only to define evaluation subgroups; it never "
+             "entered any model "
              "as a predictor.",
              ha="center", fontsize=8.5, style="italic", color="#444444")
     save(fig, fig_dir, "fig_r12_spectrum_effect")

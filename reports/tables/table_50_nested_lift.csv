@@ -1,0 +1,4 @@
+config,model,model_roc_auc,nested_single_feature_auc,nested_lift,most_selected_feature,selection_frequency,n_distinct_features_selected
+low_cost_model,svm,0.9932725694444445,0.8882378472222222,0.10503472222222232,sg,1.0,1
+laboratory_model,svm,0.9939236111111112,0.96826171875,0.02566189236111116,hemo,1.0,1
+full_valid_model,svm,1.0,0.96826171875,0.03173828125,hemo,1.0,1

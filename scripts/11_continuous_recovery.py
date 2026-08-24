@@ -82,11 +82,11 @@ def cost_figure(costs: pd.DataFrame, fig_dir: Path) -> None:
     y = np.arange(len(ordered))
     ax.barh(y, ordered["binning_cost"], color="#0072B2")
     ax.set_yticks(y)
-    ax.set_yticklabels([f"`{v}`" for v in ordered["variable"]])
+    ax.set_yticklabels(list(ordered["variable"]), fontfamily="monospace")
     ax.axvline(0.0, color="0.3", lw=0.9)
     ax.set_xlabel("univariate ROC-AUC lost to interval encoding\n"
                   "(continuous - binned, same patients)")
-    ax.set_title("What pre-discretisation cost, per variable")
+    ax.set_title("What the discretisation cost, per variable")
     for yi, (_, r) in zip(y, ordered.iterrows()):
         ax.text(r["binning_cost"] + 0.004, yi, f"{r['binning_cost']:+.3f}",
                 va="center", fontsize=9)

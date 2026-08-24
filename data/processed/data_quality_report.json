@@ -1,6 +1,6 @@
 {
   "provenance": {
-    "source_path": "G:\\My Drive\\Projects\\Healthcare research\\data\\raw\\ckd-dataset-v2.csv",
+    "source_path": "G:\\My Drive\\Projects\\CKD Screening Model\\data\\raw\\ckd-dataset-v2.csv",
     "sha256": "f24075f420b0f271bfddf3844a40061dbe9e2cb1c2336daa64463122344ea84a",
     "shape_including_metadata_rows": [
       202,

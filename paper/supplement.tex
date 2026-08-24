@@ -1,0 +1,230 @@
+%==============================================================================
+%  Supplementary material for
+%  "Three Mechanisms Inflate Reported Performance on a Widely Used Public
+%   Chronic Kidney Disease Benchmark"
+%
+%  Build:  pdflatex supplement && pdflatex supplement
+%
+%  Every table here is generated from a committed CSV in reports/tables/;
+%  the source file is named in a comment above each.
+%==============================================================================
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\newcommand{\tabhead}[1]{\textbf{#1}}
+\renewcommand{\arraystretch}{1.15}
+
+% Number supplementary floats S1, S2, ...
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thesection}{S\arabic{section}}
+
+\begin{document}
+
+\title{Supplementary Material\\
+Three Mechanisms Inflate Reported Performance\\
+on a Widely Used Public Chronic Kidney Disease Benchmark}
+
+% TODO(author): mirror the main manuscript's author block before submission.
+\author{\IEEEauthorblockN{Author Name}
+\IEEEauthorblockA{\textit{Department} \\
+\textit{Institution}\\
+City, Country \\
+email@institution.edu}}
+
+\maketitle
+
+\section{Scope of this supplement}
+
+This document holds material that supports the main text but would displace
+its argument: the full feature registry, the complete provenance sensitivity
+suite, candidate flagging values for the audit framework, the extended
+discussion of synthetic-data pipelines, reproducibility detail, and the
+reporting checklist.
+
+Every quantity is generated from a committed result file. Where an analysis
+could not be completed, this supplement says so rather than omitting the
+question.
+
+%==============================================================================
+\section{Feature-availability and leakage registry}
+
+The registry (\texttt{data/feature\_registry.csv}) records 18 fields for each
+of the 29 columns. Table~\ref{tab:sregistry} summarises the classification;
+the full file, including per-variable evidence and uncertainty notes, ships
+with the code.
+
+% Source: reports/tables/table_47_registry_summary.csv
+\begin{table}[h]
+\caption{Variables per leakage category.}
+\label{tab:sregistry}
+\centering
+\footnotesize
+\input{generated/registry_summary}
+\end{table}
+
+Feature configurations are derived from this file rather than maintained
+separately. \texttt{tests/test\_registry.py} asserts that the derivation
+reproduces the configurations used in the reference analysis exactly; if a
+classification is edited without updating the configurations, or vice versa,
+the test suite fails.
+
+%==============================================================================
+\section{Provenance sensitivity: full results}
+
+Section~V-D of the main text reports the headline sensitivity analyses.
+Table~\ref{tab:loo} gives the complete leave-one-variable-out results,
+generated from the result file rather than transcribed.
+
+\input{generated/leave_one_out}
+
+\subsection{Matched-pair audit}
+
+\texttt{table\_45\_matched\_pair\_audit.csv} contains twelve reproducibly
+sampled matched pairs (seed fixed in the script), each showing the analysed
+patient's published interval alongside the candidate record's value for every
+matching variable. Readers can regenerate and inspect it with
+\texttt{python scripts/21\_provenance\_sensitivity.py}.
+
+\subsection{A null that cannot be used}
+
+Permuting whole candidate rows does not provide a null for this statistic:
+maximum bipartite matching depends only on the multiset of candidate records,
+not on their order, so the statistic is invariant by construction. We
+implemented it, observed exactly zero variance, and replaced it with the
+copula null reported in the main text. The check is retained as
+\texttt{row\_permutation\_is\_degenerate} in
+\texttt{provenance\_sensitivity.py}, so the claim is verifiable rather than
+asserted.
+
+%==============================================================================
+\section{Audit framework: candidate flagging values}
+
+The main text reports the three measurements as quantities. Candidate
+flagging values are given here because they are calibrated on a single
+benchmark and should not be read as criteria:
+
+\begin{itemize}
+  \item multivariable lift below 0.05,
+  \item 90\% of achievable gain reached below 25\% of the training data,
+  \item standardisation shift above 0.05.
+\end{itemize}
+
+Applied to this benchmark, at least one value is exceeded for every
+configuration. We repeat that this demonstrates internal consistency, not
+external validity: the values have not been shown to separate informative
+from uninformative benchmarks, and doing so requires a multi-dataset study
+with known ground truth that we have not performed.
+
+\subsection{The negative result, in full}
+
+Standardising ROC-AUC to a published community screening case mix moves it by
+at most 0.008 on this dataset --- it would not flag a benchmark that Section
+V-B shows to be case-mix sensitive at a threshold. Standardising sensitivity
+at a fixed operating point moves it by up to 0.056. The explanation is
+specific to this sample: early-stage cases here have subgroup ROC-AUC 0.983
+(21 cases), so re-weighting toward them changes few rankings. This is
+\emph{not} evidence that AUC is generally insensitive to spectrum effects; a
+case mix that pushes cases below controls does move AUC. The practical
+implication is narrower: standardising discrimination alone can give false
+reassurance, so an operating-point metric should be standardised alongside
+it.
+
+%==============================================================================
+\section{Extension to synthetic tabular and synthetic patient data}
+
+The failure modes documented in the main text are not specific to real data,
+and the safeguards generalise to pipelines that generate or evaluate
+synthetic tabular records. Synthetic-data evaluation is harder in one
+respect: a generator trained on a source table can reproduce individual rows,
+so ``is the evaluation set independent of the training set?'' becomes a
+question about memorisation as well as provenance.
+
+\textbf{Already implemented here}, in a form adapted to real-data provenance:
+cryptographic dataset fingerprints (SHA-256 on every load, re-verified in
+continuous integration); exact-row and near-duplicate detection across
+training, validation, test and reference sets (the interval-containment
+matching, a tolerance-based near-duplicate test calibrated against a
+permutation null); entity-level overlap checks with held-out variable
+agreement; feature--target leakage scans and detection of target proxies and
+post-outcome variables (the registry and its guards); enforcement that all
+preprocessing is fitted inside cross-validation folds; provenance manifests
+recording origin, version, transformations and split history; and a
+fail-closed gate that blocks evaluation when a cohort is not verified
+independent.
+
+\textbf{Not implemented here, and required for synthetic data:}
+membership-inference and memorisation checks, which ask whether a synthetic
+record discloses that a particular real patient was in the training set; and
+nearest-neighbour similarity or distance-to-closest-record diagnostics, which
+ask whether synthetic rows are near-copies of real ones. The latter is both a
+privacy question and an evaluation-validity question --- a synthetic test set
+whose records sit arbitrarily close to training records reproduces, in
+subtler form, exactly the non-independent evaluation this paper documents.
+The present work provides the provenance half of the problem, not the
+memorisation half.
+
+A caution carries over with the recipe. The most consequential mechanism in
+this study was case composition, which no fingerprint, hash or duplicate scan
+would detect. A synthetic cohort can be free of memorisation, pass every
+overlap check, and still be uninformative because its severity distribution
+makes the task trivial. Provenance gating and informativeness diagnostics are
+therefore complementary rather than alternatives.
+
+%==============================================================================
+\section{Reproducibility}
+
+\subsection{One-command reproduction}
+
+\begin{verbatim}
+python reproduce.py
+\end{verbatim}
+
+validates input hashes, preprocesses, runs the analysis stages and test
+suite, regenerates tables and figures, builds the manuscript, and verifies
+that generated results match manuscript values. Individual targets are
+documented in \texttt{README.md}. A \texttt{Makefile} offers the same
+targets for POSIX users, but \texttt{make} is absent from the reference
+machine, so it is provided \emph{unverified}: \texttt{reproduce.py} is the
+path we have run.
+
+\subsection{Environment}
+
+The reference environment is CPython 3.14.5 on Windows 11 with numpy 2.5.2,
+pandas 3.0.5, scikit-learn 1.9.0 and scipy 1.18.0; the complete freeze is in
+\texttt{requirements.lock.txt}, which also records the BLAS build.
+
+Identical seeds reproduce identical predictions within an environment. Across
+a rebuild from the same pinned versions, agreement is to about $10^{-16}$
+rather than bit-for-bit, because floating-point summation order depends on
+the installed BLAS. The regression test asserts $10^{-12}$ rather than
+claiming exactness the project cannot deliver.
+
+\subsection{Data access}
+
+The two UCI releases are openly licensed (CC BY 4.0) and are retrieved by
+scripts with recorded checksums. The MIMIC-IV Clinical Database Demo is
+openly available from PhysioNet. One registered dataset --- a community-based
+CKD screening series --- is access-restricted and was not obtained; the
+manuscript states where that limits the work.
+
+%==============================================================================
+\section{Reporting checklist}
+
+A completed TRIPOD+AI checklist ships as
+\texttt{reports/tables/table\_36\_tripod\_ai.csv}: each
+item is marked satisfied, partly, adapted or not applicable, naming the
+section or artefact that addresses it. Items marked \emph{partly} ---
+eligibility, outcome timing, fairness, preregistration --- are those the
+dataset cannot support.
+
+\end{document}

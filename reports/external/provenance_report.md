@@ -1,6 +1,6 @@
 # External-dataset provenance report
 
-*Generated 2026-08-22 by `scripts/00_provenance.py`. Every number below is read from `reports/tables/table_24_provenance.csv` and `table_24_provenance_evidence.csv`; the verdict rule is the mechanical one in `src/ckd/data/provenance.py::classify`, fixed before any external result existed.*
+*Generated 2026-08-24 by `scripts/00_provenance.py`. Every number below is read from `reports/tables/table_24_provenance.csv` and `table_24_provenance_evidence.csv`; the verdict rule is the mechanical one in `src/ckd/data/provenance.py::classify`, fixed before any external result existed.*
 
 **Gate.** Only datasets classified INDEPENDENT with a completed or not-applicable record check may appear in an external-validation table. `tests/test_external.py::TestProvenanceGate` enforces this mechanically. A RESTRICTED dataset re-enters this stage when its data arrives; its verdict is documentary until then and it remains blocked (`record_check = pending-data`).
 
