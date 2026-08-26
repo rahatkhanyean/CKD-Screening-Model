@@ -1,7 +1,9 @@
 leakage_category,n_variables,n_excluded,variables
-legitimate_pre_index,11,0,"age, al, ba, bgr, htn, pc, pcc, pe, sg, sod, wbcc"
-uncertain_provenance,8,0,"appet, bp (Diastolic), bp limit, cad, dm, pot, rbc, su"
+uncertain_provenance,6,0,"appet, bp (Diastolic), bp limit, cad, dm, su"
+legitimate_pre_index,5,0,"age, bgr, htn, pe, wbcc"
 consequence_of_advanced_disease,4,0,"ane, hemo, pcv, rbcc"
+correlated_renal_biomarker,4,0,"bu, pot, sg, sod"
+possible_criterion_sediment,4,0,"ba, pc, pcc, rbc"
 deterministic_outcome_derivative,2,2,"grf, stage"
-incorporation_risk,2,0,"bu, sc"
+diagnostic_criterion_input,2,0,"al, sc"
 direct_outcome_copy,2,2,"affected, class"

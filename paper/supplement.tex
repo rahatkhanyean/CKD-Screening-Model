@@ -104,7 +104,67 @@ implemented it, observed exactly zero variance, and replaced it with the
 copula null reported in the main text. The check is retained as
 \texttt{row\_permutation\_is\_degenerate} in
 \texttt{provenance\_sensitivity.py}, so the claim is verifiable rather than
-asserted.
+asserted. It is reported here, and not in the main text, because it is a
+property of the estimator rather than a competing scientific null.
+
+\subsection{Which nulls are implemented, and whether they work}
+
+Two nulls are implemented and reported. \emph{Independent column permutation}
+shuffles each candidate column separately, destroying every cross-variable
+relationship; beating it establishes only that candidate records are
+internally coherent. The \emph{Gaussian-copula null} is the stricter one:
+within each outcome stratum the 13 containment variables are rank-transformed
+to normal scores, a correlation matrix is estimated on those scores, synthetic
+normal draws are generated through its Cholesky factor, and each column is
+mapped back through its own empirical marginal using nearest-value
+quantiles, so that every synthetic value is a value the column actually
+takes. Missingness is preserved per column and per record. Seeds derive from
+the master seed; 200 draws are used.
+
+Nearest-value mapping matters. Linear interpolation would place synthetic
+values \emph{between} the release's discrete bin representatives, where no
+published interval can contain them; the null would then be depressed for a
+purely mechanical reason and would flatter the observed result. With the
+discrete support preserved, the null rises slightly, which is the
+conservative direction.
+
+A null is only as good as its construction, so we measured whether it
+preserves what it claims (Table~\ref{tab:nulldiag}). Across the 78 variable
+pairs the mean absolute difference between the real and synthetic Spearman
+correlations is 0.031, against real correlations spanning $-0.73$ to $+0.87$;
+the largest single discrepancy is 0.168. No synthetic value falls outside its
+column's observed support. The null therefore reproduces the cohort's shape
+closely while destroying record identity, which is what makes exceeding it
+informative.
+
+\input{generated/null_diagnostics}
+
+%==============================================================================
+\section{All registry-derived configurations}
+
+Table~\ref{tab:restrictedfull} reports every configuration derived from the
+corrected registry, with the full metric set. The main text shows seven of
+these; the remaining rows separate the two limbs of the KDIGO definition so
+that a reader can see each removed on its own. \emph{Saturated} marks a
+configuration whose lower interval bound is at or above 0.99. The two
+unsaturated rows are the ones restricted to information plausibly available
+before the renal work-up.
+
+\input{generated/restricted_full}
+
+%==============================================================================
+\section{Case-mix re-weighting}
+
+Table~\ref{tab:casemixsim} reports measured performance under target severity
+distributions, with the fitted models held fixed and the out-of-fold
+predictions re-weighted. It is a resampling exercise and not prospective
+evidence: it answers what would have been \emph{measured} on a differently
+composed cohort using this model, not what a model trained on that cohort
+would achieve. The last column is the honest limit on it --- with 9 stage-1
+and 12 stage-2 cases in the benchmark, an early-heavy target reuses a few
+patients many times, and the Monte Carlo intervals do not reflect that.
+
+\input{generated/casemix_simulation}
 
 %==============================================================================
 \section{Audit framework: candidate flagging values}

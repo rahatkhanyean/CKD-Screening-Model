@@ -1,0 +1,48 @@
+{
+  "uci_id": 336,
+  "name": "Chronic Kidney Disease",
+  "repository_url": "https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease",
+  "data_url": "https://archive.ics.uci.edu/static/public/336/data.csv",
+  "abstract": "This dataset can be used to predict the chronic kidney disease and it can be collected from the hospital nearly 2 months of period.",
+  "area": "Other",
+  "tasks": [
+    "Classification"
+  ],
+  "characteristics": [
+    "Multivariate"
+  ],
+  "num_instances": 400,
+  "num_features": 24,
+  "feature_types": [
+    "Real"
+  ],
+  "demographics": [
+    "Age"
+  ],
+  "target_col": [
+    "class"
+  ],
+  "index_col": null,
+  "has_missing_values": "yes",
+  "missing_values_symbol": "NaN",
+  "year_of_dataset_creation": 2015,
+  "last_updated": "Mon Mar 04 2024",
+  "dataset_doi": "10.24432/C5G020",
+  "creators": [
+    "L. Rubini",
+    "P. Soundarapandian",
+    "P. Eswaran"
+  ],
+  "intro_paper": null,
+  "additional_info": {
+    "summary": "We use the following representation to collect the dataset\r\n                        age\t\t-\tage\t\r\n\t\t\tbp\t\t-\tblood pressure\r\n\t\t\tsg\t\t-\tspecific gravity\r\n\t\t\tal\t\t-   \talbumin\r\n\t\t\tsu\t\t-\tsugar\r\n\t\t\trbc\t\t-\tred blood cells\r\n\t\t\tpc\t\t-\tpus cell\r\n\t\t\tpcc\t\t-\tpus cell clumps\r\n\t\t\tba\t\t-\tbacteria\r\n\t\t\tbgr\t\t-\tblood glucose random\r\n\t\t\tbu\t\t-\tblood urea\r\n\t\t\tsc\t\t-\tserum creatinine\r\n\t\t\tsod\t\t-\tsodium\r\n\t\t\tpot\t\t-\tpotassium\r\n\t\t\themo\t\t-\themoglobin\r\n\t\t\tpcv\t\t-\tpacked cell volume\r\n\t\t\twc\t\t-\twhite blood cell count\r\n\t\t\trc\t\t-\tred blood cell count\r\n\t\t\thtn\t\t-\thypertension\r\n\t\t\tdm\t\t-\tdiabetes mellitus\r\n\t\t\tcad\t\t-\tcoronary artery disease\r\n\t\t\tappet\t\t-\tappetite\r\n\t\t\tpe\t\t-\tpedal edema\r\n\t\t\tane\t\t-\tanemia\r\n\t\t\tclass\t\t-\tclass\t",
+    "purpose": null,
+    "funded_by": null,
+    "instances_represent": null,
+    "recommended_data_splits": null,
+    "sensitive_data": null,
+    "preprocessing_description": null,
+    "variable_info": "We use 24 + class = 25 ( 11  numeric ,14  nominal)\r\n1.Age(numerical)\r\n  \t  \tage in years\r\n \t2.Blood Pressure(numerical)\r\n\t       \tbp in mm/Hg\r\n \t3.Specific Gravity(nominal)\r\n\t  \tsg - (1.005,1.010,1.015,1.020,1.025)\r\n \t4.Albumin(nominal)\r\n\t\tal - (0,1,2,3,4,5)\r\n \t5.Sugar(nominal)\r\n\t\tsu - (0,1,2,3,4,5)\r\n \t6.Red Blood Cells(nominal)\r\n\t\trbc - (normal,abnormal)\r\n \t7.Pus Cell (nominal)\r\n\t\tpc - (normal,abnormal)\r\n \t8.Pus Cell clumps(nominal)\r\n\t\tpcc - (present,notpresent)\r\n \t9.Bacteria(nominal)\r\n\t\tba  - (present,notpresent)\r\n \t10.Blood Glucose Random(numerical)\t\t\r\n\t\tbgr in mgs/dl\r\n \t11.Blood Urea(numerical)\t\r\n\t\tbu in mgs/dl\r\n \t12.Serum Creatinine(numerical)\t\r\n\t\tsc in mgs/dl\r\n \t13.Sodium(numerical)\r\n\t\tsod in mEq/L\r\n \t14.Potassium(numerical)\t\r\n\t\tpot in mEq/L\r\n \t15.Hemoglobin(numerical)\r\n\t\themo in gms\r\n \t16.Packed  Cell Volume(numerical)\r\n \t17.White Blood Cell Count(numerical)\r\n\t\twc in cells/cumm\r\n \t18.Red Blood Cell Count(numerical)\t\r\n\t\trc in millions/cmm\r\n \t19.Hypertension(nominal)\t\r\n\t\thtn - (yes,no)\r\n \t20.Diabetes Mellitus(nominal)\t\r\n\t\tdm - (yes,no)\r\n \t21.Coronary Artery Disease(nominal)\r\n\t\tcad - (yes,no)\r\n \t22.Appetite(nominal)\t\r\n\t\tappet - (good,poor)\r\n \t23.Pedal Edema(nominal)\r\n\t\tpe - (yes,no)\t\r\n \t24.Anemia(nominal)\r\n\t\tane - (yes,no)\r\n \t25.Class (nominal)\t\t\r\n\t\tclass - (ckd,notckd)",
+    "citation": null
+  }
+}

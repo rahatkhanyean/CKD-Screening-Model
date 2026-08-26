@@ -21,6 +21,7 @@ from ckd.features.registry import (
     CAVEATED_CATEGORIES,
     PROHIBITED_CATEGORIES,
     caveated_variables,
+    incorporation_variables,
     configuration_features,
     configuration_names,
     load_registry,
@@ -89,13 +90,39 @@ class TestTaxonomyContent:
             "stage", "grf"
         }
 
-    def test_creatinine_is_flagged_as_incorporation_risk(self):
-        """Serum creatinine is admissible but is an input to the equation
-        defining the outcome; the manuscript's argument depends on this
-        being recorded rather than silently treated as an ordinary
-        predictor."""
+    def test_both_kdigo_limbs_are_flagged_as_criterion_inputs(self):
+        """KDIGO defines CKD by the GFR limb *or* a kidney-damage marker.
+
+        The released file carries both: creatinine feeds the eGFR equation,
+        and urine albumin is the albuminuria marker (ACR >=30 mg/g is the
+        first-listed damage criterion). An earlier registry recorded only
+        creatinine and treated albumin as an ordinary predictor, which made
+        every "incorporation removed" statement false --- the albuminuria
+        limb stayed in the model. Both must be recorded.
+        """
         caveats = caveated_variables()
-        assert caveats.get("sc") == "incorporation_risk"
+        assert caveats.get("sc") == "diagnostic_criterion_input"
+        assert caveats.get("al") == "diagnostic_criterion_input"
+
+    def test_blood_urea_is_not_a_diagnostic_criterion(self):
+        """Blood urea appears nowhere in the KDIGO definition of CKD.
+
+        It was previously classified as an incorporation risk. That
+        overstated the leakage claim: urea is a correlated renal biomarker,
+        confounded by protein intake, catabolism, hydration and GI bleeding,
+        not a criterion the diagnosis is built from.
+        """
+        caveats = caveated_variables()
+        assert caveats.get("bu") == "correlated_renal_biomarker"
+        assert "bu" not in incorporation_variables()
+        assert "bu" not in incorporation_variables(strict=True)
+
+    def test_incorporation_set_covers_albuminuria_in_both_readings(self):
+        """No incorporation set may omit the albuminuria limb."""
+        assert "al" in incorporation_variables(strict=True)
+        assert "al" in incorporation_variables()
+        # The broad reading additionally sweeps in sediment findings.
+        assert incorporation_variables(strict=True) < incorporation_variables()
 
     def test_anaemia_markers_are_flagged_as_consequences(self):
         consequences = set(variables_by_category("consequence_of_advanced_disease"))

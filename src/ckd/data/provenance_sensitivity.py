@@ -231,7 +231,14 @@ def copula_null(
                 if ok.sum() < 3:
                     continue
                 quantiles = norm.cdf(z[:, j])
-                new = np.quantile(col[ok], np.clip(quantiles, 0, 1)).astype(float)
+                # ``method="nearest"`` snaps each synthetic value onto a value
+                # the column actually takes. Linear interpolation would place
+                # synthetic values *between* the release's discrete bin
+                # representatives, where no interval can contain them, which
+                # would depress the null and flatter the observed result. The
+                # discrete support must be preserved for the null to be fair.
+                new = np.quantile(col[ok], np.clip(quantiles, 0, 1),
+                                  method="nearest").astype(float)
                 # Preserve the original missingness pattern per column.
                 new[~observed[:, j]] = np.nan
                 synthetic.loc[synthetic.index[idx], v] = new
@@ -242,6 +249,105 @@ def copula_null(
             )
         )
     return draws
+
+
+def copula_null_diagnostics(
+    candidate: pd.DataFrame,
+    candidate_target: np.ndarray,
+    variables: tuple[str, ...] = CONTAINMENT_VARIABLES,
+    n_draws: int = 20,
+    seed: int = 0,
+) -> pd.DataFrame:
+    """Check that the copula null preserves what it claims to preserve.
+
+    A null is only as strong as its construction. This one asserts that the
+    synthetic cohort keeps the candidate's marginal distributions *and*
+    approximately its dependence structure while destroying record identity.
+    Asserting that is not the same as showing it, so this function measures
+    it and returns the comparison for publication.
+
+    For each variable it reports the real and mean synthetic median and
+    standard deviation, and whether every synthetic value lies on the
+    column's observed support. For each variable pair it reports the real and
+    mean synthetic Spearman correlation. A null that flattened the
+    dependence structure would show synthetic correlations shrunk toward
+    zero, and would be a weaker null than claimed.
+    """
+    from scipy.stats import norm
+
+    rng = np.random.default_rng(seed)
+    numeric = {
+        v: pd.to_numeric(candidate[v], errors="coerce").to_numpy(dtype=float)
+        for v in variables
+    }
+    real = pd.DataFrame(numeric)
+    real_corr = real.corr(method="spearman")
+
+    synth_frames: list[pd.DataFrame] = []
+    for k in range(n_draws):
+        drawn = {}
+        for v in variables:
+            drawn[v] = np.full(len(candidate), np.nan)
+        for label in np.unique(candidate_target):
+            idx = np.flatnonzero(candidate_target == label)
+            block = np.column_stack([numeric[v][idx] for v in variables])
+            scores = np.full_like(block, np.nan, dtype=float)
+            for j in range(block.shape[1]):
+                col = block[:, j]
+                ok = ~np.isnan(col)
+                if ok.sum() < 3:
+                    continue
+                ranks = pd.Series(col[ok]).rank(method="average").to_numpy()
+                scores[ok, j] = norm.ppf(ranks / (ok.sum() + 1))
+            filled = np.where(np.isnan(scores), 0.0, scores)
+            corr = np.nan_to_num(np.corrcoef(filled, rowvar=False), nan=0.0)
+            np.fill_diagonal(corr, 1.0)
+            try:
+                chol = np.linalg.cholesky(corr + 1e-6 * np.eye(corr.shape[0]))
+            except np.linalg.LinAlgError:
+                chol = np.eye(corr.shape[0])
+            z = rng.standard_normal((len(idx), len(variables))) @ chol.T
+            for j, v in enumerate(variables):
+                col = block[:, j]
+                ok = ~np.isnan(col)
+                if ok.sum() < 3:
+                    continue
+                q = np.clip(norm.cdf(z[:, j]), 0, 1)
+                values = np.quantile(col[ok], q, method="nearest")
+                values[np.isnan(col)] = np.nan
+                drawn[v][idx] = values
+        synth_frames.append(pd.DataFrame(drawn))
+
+    rows: list[dict] = []
+    for v in variables:
+        observed_support = set(real[v].dropna().unique())
+        off_support = sum(
+            int((~frame[v].dropna().isin(observed_support)).sum())
+            for frame in synth_frames
+        )
+        rows.append({
+            "quantity": "marginal",
+            "term": v,
+            "real": float(real[v].median()),
+            "null_mean": float(np.mean([f[v].median() for f in synth_frames])),
+            "real_sd": float(real[v].std()),
+            "null_sd_mean": float(np.mean([f[v].std() for f in synth_frames])),
+            "synthetic_values_off_observed_support": off_support,
+        })
+    for i, a in enumerate(variables):
+        for b in variables[i + 1:]:
+            null_rho = [f[[a, b]].corr(method="spearman").iloc[0, 1]
+                        for f in synth_frames]
+            rows.append({
+                "quantity": "spearman_pair",
+                "term": f"{a}~{b}",
+                "real": float(real_corr.loc[a, b]),
+                "null_mean": float(np.nanmean(null_rho)),
+                "real_sd": float("nan"),
+                "null_sd_mean": float(np.nanstd(null_rho)),
+                "synthetic_values_off_observed_support": 0,
+            })
+    return pd.DataFrame(rows)
 
 
 def row_permutation_is_degenerate(

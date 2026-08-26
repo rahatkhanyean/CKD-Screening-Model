@@ -7,4 +7,7 @@ n_verified_metric_geq_099,2
 n_kabir_coded_sc_egfr_yes,9
 n_using_uci2023_or_merged,4
 n_cross_dataset_uci2015_uci2023,3
+n_cross_dataset_VERIFIED_from_source,1
+n_cross_dataset_attributed_only,2
+n_merging_releases_VERIFIED_from_source,1
 n_with_genuinely_external_validation,1

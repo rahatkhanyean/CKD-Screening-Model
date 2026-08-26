@@ -1,0 +1,4 @@
+config,model,cases_per_stage,n_cases,sampling,roc_auc,roc_auc_mc_low,roc_auc_mc_high,sensitivity,sensitivity_mc_low,sensitivity_mc_high,n_monte_carlo_draws
+low_cost_model,svm,9,45,without replacement,0.9905830246913581,0.9808641975308642,0.9966049382716049,0.9507555555555556,0.9111111111111111,0.9777777777777777,1000
+laboratory_model,svm,9,45,without replacement,0.9903660493827159,0.9833256172839506,0.9956867283950618,0.9343555555555556,0.9111111111111111,0.9555555555555556,1000
+full_valid_model,svm,9,45,without replacement,1.0,1.0,1.0,1.0,1.0,1.0,1000

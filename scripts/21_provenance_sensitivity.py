@@ -45,6 +45,7 @@ from ckd.data.provenance_sensitivity import (  # noqa: E402
     leave_one_out,
     match_once,
     copula_null,
+    copula_null_diagnostics,
     row_permutation_is_degenerate,
     sample_matched_pairs,
     tolerance_sensitivity,
@@ -201,6 +202,45 @@ def main() -> int:
           f"{col_draws.std(ddof=1):.4f} (max {col_draws.max():.4f})")
     print(f"  copula null           {row_draws.mean():.4f} +/- "
           f"{row_draws.std(ddof=1):.4f} (max {row_draws.max():.4f})")
+
+    # Exceedance, reported as a bound rather than a point p-value: with B
+    # draws and zero exceedances the smallest reportable value is 1/(B+1).
+    exceed_col = int((col_draws >= observed).sum())
+    exceed_cop = int((row_draws >= observed).sum())
+    nulls_summary = pd.DataFrame([
+        {"null": "independent_column_permutation",
+         "description": "each candidate column permuted independently; "
+                        "destroys all cross-variable structure",
+         "n_draws": len(col_draws), "mean": col_draws.mean(),
+         "sd": col_draws.std(ddof=1), "max": col_draws.max(),
+         "observed": observed, "n_at_or_above_observed": exceed_col,
+         "p_upper_bound": (exceed_col + 1) / (len(col_draws) + 1)},
+        {"null": "gaussian_copula_marginals_and_correlations",
+         "description": "outcome-stratified Gaussian copula on ranks, mapped "
+                        "back to the observed discrete support; preserves "
+                        "marginals and approximate dependence",
+         "n_draws": len(row_draws), "mean": row_draws.mean(),
+         "sd": row_draws.std(ddof=1), "max": row_draws.max(),
+         "observed": observed, "n_at_or_above_observed": exceed_cop,
+         "p_upper_bound": (exceed_cop + 1) / (len(row_draws) + 1)},
+    ])
+    nulls_summary.to_csv(tables_dir / "table_46_provenance_null_summary.csv",
+                         index=False)
+    print("wrote table_46_provenance_null_summary.csv")
+
+    # ---- does the copula null preserve what it claims to? -----------------
+    diagnostics = copula_null_diagnostics(
+        cand, cand_y, n_draws=max(20, args.permutations // 10),
+        seed=int(cfg["seed"]))
+    diagnostics.to_csv(tables_dir / "table_53_copula_null_diagnostics.csv",
+                       index=False)
+    pairs = diagnostics[diagnostics["quantity"] == "spearman_pair"]
+    marg = diagnostics[diagnostics["quantity"] == "marginal"]
+    print("  null diagnostics: mean |real - null| Spearman over "
+          f"{len(pairs)} pairs = "
+          f"{(pairs['real'] - pairs['null_mean']).abs().mean():.3f}; "
+          f"synthetic values off the observed support = "
+          f"{int(marg['synthetic_values_off_observed_support'].sum())}")
 
     # ---- matched-pair audit ---------------------------------------------
     compat = compatibility_matrix(internal.clean, y, cand, cand_y, mappings,

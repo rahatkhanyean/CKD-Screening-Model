@@ -55,7 +55,7 @@ email@institution.edu}
 %==============================================================================
 \begin{abstract}
 \textbf{Background.} Machine-learning studies using the public UCI chronic
-kidney disease (CKD) benchmarks frequently report accuracy at or near 100\%.
+kidney disease (CKD) benchmarks report accuracy at or near 100\%.
 Whether such results reflect transportable predictive ability has not been
 systematically examined.
 \textbf{Objective.} To audit what properties of these benchmarks produce
@@ -75,11 +75,14 @@ a post-diagnosis stage label and the diagnostic eGFR value; including them
 takes every configuration to ROC-AUC 1.000. (ii) \emph{Case composition}:
 with all prohibited columns removed, discrimination remains near 1.000, and
 84\% of cases carry stage 3--5 disease with haemoglobin alone reaching
-univariate ROC-AUC 0.968. Removing variables that enter the diagnostic
-criterion, or that are consequences of advanced disease, does not restore
-headroom (0.991--1.000), so no single pathway is necessary; case composition
-appears principal but cannot be cleanly separated from incorporation and
-feature redundancy. (iii) \emph{Non-independent evaluation}: a record-level
+univariate ROC-AUC 0.968. Removing the inputs to \emph{both} limbs of the
+KDIGO definition --- serum creatinine and urine albumin --- together with
+urine sediment findings leaves discrimination at 1.000, so the selected
+variables representing diagnostic incorporation are not individually
+necessary. Restricting to information plausibly available before the renal
+work-up does reduce it, to 0.930 (0.894--0.962) on five variables. Holding
+the models fixed and re-weighting the severity mix from 16\% to 80\%
+early-stage cases moves ROC-AUC only from 0.993 to 0.987. (iii) \emph{Non-independent evaluation}: a record-level
 check finds all 200 patients of the 2020 release matching into the 2015
 release, 187 uniquely, with zero contradictions across ten variables not used
 in matching, against a correlation-preserving null of $\NullCopulaMean \pm \NullCopulaSD$. The
@@ -96,9 +99,12 @@ definition, missingness, clinical setting and distribution shift as well as
 to any internal optimism, which this design cannot separate. Our review of
 prior work is targeted and illustrative, not systematic.
 \textbf{Conclusion.} Near-ceiling performance on this benchmark reflects a
-combination of invalid information pathways, non-independent evaluation and
-unusually separable case composition, rather than demonstrated transportable
-early-detection performance. High internal discrimination here is real but of
+combination of invalid information pathways, non-independent evaluation, and
+a cohort whose composition is unusually separable. The persistence of that
+performance across restricted feature sets is consistent with separable
+cohort composition, although its contribution cannot be isolated from
+residual incorporation, proxy information, feature redundancy and unknown
+recruitment mechanisms. High internal discrimination here is real but of
 limited clinical difficulty and unknown transportability. We release the
 pipeline, a reusable provenance gate, and a proof-of-concept pre-modelling
 audit framework whose thresholds are not yet validated across benchmarks.
@@ -160,7 +166,7 @@ fired, and the investigation into why became the study.
         analysed cohort, making the cost of the published discretisation
         measurable \emph{within-cohort}, and in doing so surface undocumented
         constant imputation in the released file.
-  \item We report an \textbf{honest uncertainty interval} obtained by
+  \item We report a \textbf{whole-procedure uncertainty interval} obtained by
         bootstrapping the entire nested procedure, which is 1.7--2.7$\times$
         wider than the conventional prediction-level interval.
   \item We report a \textbf{transportability probe} on the one independent
@@ -214,30 +220,7 @@ directly affected by the cohort-overlap finding of
 Section~\ref{sec:mech3}.
 
 % Source: reports/tables/table_26_prior_work_summary.csv
-\begin{table}[t]
-\caption{Targeted illustrative review ($N=13$ studies examined). Rows marked
-\emph{attributed} rest on a published comparison table~\cite{kabir2026}, not
-on our own reading, and support no quantitative claim. This is not a
-systematic sample; no prevalence should be inferred from it.}
-\label{tab:lit}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{lrl}
-\toprule
-\tabhead{Quantity} & \tabhead{Value} & \tabhead{Basis} \\
-\midrule
-Studies examined & 13 & our sample \\
-Independently verified & 3 & full text / abstract \\
-Not accessible (paywalled) & 10 & --- \\
-Verified headline metrics $\geq 0.99$ & 2 of 3 & verified only \\
-Coded as using creatinine or eGFR & 9 & attributed \\
-Using the 2020 release or a merge & 4 & attributed \\
-Cross-validating between the releases & 3 & attributed \\
-With a genuinely external cohort & 1 & verified \\
-\bottomrule
-\end{tabular}
-\end{table}
+\input{generated/literature_summary}
 
 The purpose of the table is existence, not prevalence: it establishes that
 studies reporting near-ceiling accuracy on this benchmark, studies using
@@ -356,13 +339,41 @@ declared configurations exactly, so a classification cannot drift from the
 configuration depending on it.
 
 The taxonomy separates categories that are often conflated
-(Table~\ref{tab:leakage}). Two are barred outright. Two more are admissible
-but carry interpretation caveats that the manuscript discloses wherever they
-matter: \emph{incorporation risk}, where a legitimate contemporaneous
-measurement is also an input to the diagnostic criterion, and
-\emph{consequence of advanced disease}, where a variable is real and
-measurable but derives its discriminative value from severity rather than
-from early detectability.
+(Table~\ref{tab:leakage}), and it is anchored to the definition of the
+disease rather than to intuition about which measurements ``look like'' the
+outcome. KDIGO defines CKD by a GFR below 60~mL/min/1.73~m$^2$ \emph{or} a
+marker of kidney damage persisting beyond three months, of which albuminuria
+(ACR $\geq 30$~mg/g) is the first listed~\cite{kdigo2024}. Both limbs are
+represented in the released file, and the categories follow from that:
+
+\begin{itemize}
+  \item \emph{KDIGO criterion input}: serum creatinine, which feeds the eGFR
+        equation and hence the GFR limb, and urine albumin, which is the
+        albuminuria limb. Using either risks incorporation bias.
+  \item \emph{Urine sediment}: sediment abnormalities and persistent
+        haematuria are also damage markers, so urinary red cells are
+        criterion-adjacent; pyuria and bacteriuria indicate infection
+        instead. The release does not say which reading is intended, so
+        these are separated and their incorporation risk called possible
+        rather than established.
+  \item \emph{Correlated renal biomarker}: blood urea, urine specific
+        gravity, sodium and potassium track renal function but are
+        \emph{not} KDIGO criteria. Blood urea in particular appears nowhere
+        in the definition and is confounded by protein intake, catabolic
+        state, hydration and gastrointestinal bleeding. Treating it as
+        incorporation would overstate the leakage claim.
+  \item \emph{Consequence of advanced disease}: real and measurable, but
+        deriving discriminative value from severity rather than from early
+        detectability.
+\end{itemize}
+
+One caveat is load-bearing and we state it explicitly. The released
+\texttt{al} column is a semiquantitative reagent-strip grade, not a measured
+albumin-to-creatinine ratio. Dipstick protein is a crude,
+concentration-dependent proxy that is not interchangeable with a quantified
+ratio, so its incorporation risk is real but weaker than a measured ACR
+would carry. That is why it has its own restricted configuration below
+rather than being pooled with creatinine.
 
 \input{generated/leakage_taxonomy}
 
@@ -511,7 +522,7 @@ of the remaining error: 0.992 $\rightarrow$ 1.000 for the low-cost set and
 0.953 $\rightarrow$ 1.000 for the clinical-only set. Leakage takes
 \emph{any} configuration to the ceiling.
 
-That the honest baseline is already saturated is itself the finding that
+That the strongest single-variable baseline is already saturated is itself the finding that
 motivates the next section.
 
 \subsection{Mechanism 2: case-mix composition}
@@ -524,8 +535,8 @@ patients out of fold. This is a property of the sample.
 
 % Source: reports/tables/table_22_univariate_separability.csv
 \begin{table}[t]
-\caption{Univariate separability of individual predictors. No multivariable
-learning is required to separate groups this far apart.}
+\caption{Univariate separability of individual predictors. Single
+predictors already provide unusually high discrimination on this sample.}
 \label{tab:sep}
 \centering
 \footnotesize
@@ -608,8 +619,9 @@ make no claim that the effect size generalises beyond this sample.
 sample as a whole appears optimistic relative to the early-stage patients that
 screening exists to find; the early subgroup contains only 21 cases, so these
 comparisons are exploratory and hypothesis-generating rather than estimates.
-Panel C shows that single predictors already separate the groups, which is why
-no multivariable learning is required to reach the ceiling.}
+Panel C shows that single predictors already provide unusually high
+discrimination, so little of the measured performance requires combining
+variables.}
 \label{fig:spectrum}
 \end{figure*}
 
@@ -624,31 +636,61 @@ nested design after removing each category in turn
 
 \input{generated/restricted_featuresets}
 
-Two candidate explanations are ruled out. Removing the variables that enter
-the diagnostic criterion --- serum creatinine and blood urea --- leaves
-discrimination unchanged at 1.000, so \emph{incorporation is not what
-produces the ceiling}. Removing the consequences of advanced disease ---
-haemoglobin, packed cell volume, red-cell count and the anaemia flag ---
-costs 0.002. Removing both categories together still leaves 0.991
-(0.975--1.000), and a set restricted to the 11 variables the registry marks
-as plausibly available before a laboratory work-up reaches 0.994
-(0.986--0.999).
+Removing the inputs to \emph{both} limbs of the KDIGO definition --- serum
+creatinine for the GFR limb, urine albumin for the albuminuria limb --- and
+then also the urine sediment findings leaves discrimination unchanged at
+1.000. The selected variables representing diagnostic incorporation are
+therefore not individually necessary for the ceiling. We stress that this
+test is only meaningful because the taxonomy is anchored to the definition
+of the disease: an earlier version of this registry classified blood urea as
+a criterion input and urine albumin as an ordinary predictor, which reversed
+both assignments and left the albuminuria limb inside every model that was
+described as free of incorporation.
 
-The ceiling therefore survives the removal of both pathways, which is
-informative but is not a clean decomposition. These feature sets are heavily
-redundant: dropping haemoglobin leaves packed cell volume and red-cell count
-correlated with it, and dropping creatinine leaves urine specific gravity and
-albuminuria. What the experiment establishes is that no single information
-pathway is necessary for near-perfect discrimination on this sample.
-Accordingly we state the conclusion as: \textbf{case composition appears to be
-the principal explanation for valid models reaching the ceiling, but its
-contribution cannot be cleanly separated from diagnostic incorporation and
-feature redundancy in this dataset.}
+Removing the consequences of advanced disease costs 0.002 (0.998,
+0.995--1.000). Removing incorporation and consequences together leaves 0.995
+(0.987--1.000). The ceiling survives each of these removals.
+
+It does not survive restriction to information available \emph{before} the
+renal work-up. The five variables the corrected registry marks as plausibly
+pre-index and not of uncertain meaning --- age, hypertension, pedal oedema,
+random blood glucose and white-cell count --- reach 0.930 (0.894--0.962), and
+a three-variable history-and-examination set reaches 0.881 (0.833--0.923).
+Neither is saturated. What carries the benchmark to the ceiling is the block
+of contemporaneous renal measurements as a whole, not any single pathway
+within it, and not the information a screening encounter would have first.
+
+\subsection{Does the severity mix explain the ceiling?}
+\label{sec:mixsim}
+
+The case-composition argument so far rests on a counting fact. To test it
+directly we re-weighted the out-of-fold predictions to target severity
+distributions, holding the fitted models fixed
+(reported in full in the supplement). Moving from the benchmark's
+own mix (16\% of cases at stage 1--2) to a deliberately early-heavy mix
+(80\%) moves ROC-AUC from 0.993 to 0.987 for the low-cost configuration and
+from 0.994 to 0.984 for the laboratory configuration, and leaves the full
+valid configuration at 1.000. Sensitivity is more responsive, falling from
+0.969 to 0.923 and 0.879 respectively. A severity-balanced resample drawn
+\emph{without} replacement gives 0.991 and 0.990.
+
+This is a re-weighting of a fixed model's predictions, not prospective
+evidence, and its support is thin: the benchmark holds 9 stage-1 and 12
+stage-2 cases, so an early-heavy target reuses a handful of patients many
+times over, and the Monte Carlo intervals do not reflect that. Taken at face
+value, however, it does not support the stronger reading of the case-mix
+argument. Re-weighting severity alone does not restore headroom.
+
+We therefore state the conclusion as: \textbf{the persistence of near-ceiling
+performance across restricted feature sets is consistent with unusually
+separable cohort composition, although its contribution cannot be isolated
+from residual incorporation, proxy information, feature redundancy, and
+unknown recruitment mechanisms.}
 
 We are also explicit about what this is \emph{not} evidence of. Reaching 0.99
 on these variables is real internal discrimination, not an artefact and not
-an absence of predictive ability. What the case-mix analysis questions is its
-clinical difficulty, relevance and transportability: separating patients with
+an absence of predictive ability. What the analysis questions is its clinical
+difficulty, relevance and transportability: separating patients with
 established stage 3--5 disease from comparatively healthy controls is a
 different and easier task than the early detection a screening instrument
 would perform.
@@ -776,10 +818,15 @@ release}. We do not claim exact raw-value identity, which the discretisation
 makes untestable, and we have not contacted the repository maintainers, so
 nothing here is an officially confirmed provenance correction.
 
-Of the 13 studies examined in Section~\ref{sec:priorwork}, three validate
-across the two releases as though they were independent cohorts, and one
-merges them into a single training set before reporting accuracy. On this
-evidence those procedures evaluate models on their own training population.
+Among the 13 studies examined in Section~\ref{sec:priorwork}, \emph{one} is
+verified from its own source text to validate across the two releases as
+though they were independent cohorts, and to merge them into a single
+training set before reporting accuracy~\cite{hossain2025}. Two further
+studies are coded as cross-release in the reference survey's comparison
+table, but we could not obtain their text --- both publisher pages refused
+access when we attempted verification --- so we attribute rather than assert
+that design for them. On this evidence, a procedure of that kind evaluates
+models on a population overlapping its own training data.
 
 This is not a criticism of those authors. Nothing in either dataset's
 documentation indicates the overlap, and the present study registered the 2015
@@ -887,7 +934,7 @@ diagnostic laboratory analyte in the dataset and the models will not notice.}
 What this rules out is the specific worry that the published binning explains
 the benchmark's ceiling. It does not; the case mix does.
 
-\subsection{Honest uncertainty}
+\subsection{Whole-procedure uncertainty}
 \label{sec:honest}
 
 Conventional intervals resample patients over pooled out-of-fold predictions
@@ -941,7 +988,7 @@ Full valid & SVM & degenerate   & 0.999--1.000 & --- \\
 \end{tabular}
 \end{table}
 
-The honest intervals are 1.7--2.7$\times$ wider (Table~\ref{tab:boot}). These
+The whole-procedure intervals are 1.7--2.7$\times$ wider (Table~\ref{tab:boot}). These
 are the intervals a reader should use when asking whether two configurations
 differ; on this evidence, the study's inability to distinguish the low-cost
 and laboratory sets is if anything \emph{understated} by the narrower
@@ -1055,46 +1102,44 @@ reference is computed on exactly that feature set, so the drop caused by
 transfer is separable from any drop caused by using fewer variables.
 
 % Source: reports/tables/table_42_external_validation.csv
-\begin{table}[t]
-\caption{Frozen transfer to an independent cohort. Internal reference and
-external result use the same ten variables.}
-\label{tab:external}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lccccc}
-\toprule
-\tabhead{Model} & \tabhead{Int.\ AUC} & \tabhead{Ext.\ AUC (95\% CI)} &
-\tabhead{Brier} & \tabhead{Sens.} & \tabhead{Spec.} \\
-\midrule
-Logistic  & 0.997 & 0.702 (0.594--0.794) & 0.409 & 0.95 & 0.47 \\
-SVM       & 0.997 & 0.699 (0.599--0.788) & 0.423 & 0.95 & 0.45 \\
-Random forest & 0.997 & 0.708 (0.605--0.803) & 0.418 & 0.95 & 0.39 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\input{generated/external_table}
 
 \textbf{Discrimination falls sharply on the new cohort.} Internal ROC-AUC on
 this feature set is 0.997; on the probe cohort it is 0.699--0.708, a fall of
-roughly 0.29 (Table~\ref{tab:external}). All three model families agree, and
-the bootstrap intervals exclude the internal estimate by a wide margin. The
+roughly 0.29 (Table~\ref{tab:external}). All three model families agree. The
+external intervals lie well below the internal estimate, but we draw no
+formal inference from that: the intervals resample the external cohort only,
+the two estimates come from different designs on different patients, and no
+paired comparison of the internal--external difference was performed. The
 inference this supports is a conditional one: performance measured near the
 ceiling on this benchmark is not, on this evidence, a reliable guide to
 performance on a different patient population. It does not by itself
 establish how much of the internal figure was optimism, and we quantify
 neither.
 
+\textbf{Precision falls further than ranking does.} Because prevalence
+differs between the cohorts, ROC-AUC understates the change a deployer would
+meet. External PR-AUC is 0.313--0.326 against a no-skill baseline of 0.213
+--- an improvement over chance far smaller than the ROC-AUC of 0.70 suggests,
+and one whose interval reaches down to 0.25. We report both metrics for that
+reason.
+
 \textbf{Calibration fails worse, and for a legible reason.} External Brier
 scores are 0.409--0.423 against 0.014 internally, with calibration intercepts
 far below zero: the models assign high risk to almost everyone. At the
 prespecified threshold they retain sensitivity 0.95 while specificity
-collapses to 0.39--0.47. Prevalence is the obvious culprit---64\% in training
-against 21\% externally. Applying recalibration-in-the-large, the minimal
+collapses to 0.39--0.47. The prevalence difference---64\% in training
+against 21\% externally---is one immediately visible contributor to
+calibration-in-the-large error, alongside differences in case mix,
+measurement, missingness, setting and label definition. Applying recalibration-in-the-large, the minimal
 correction a deployer would make, reduces the Brier score to 0.172--0.175. It
 cannot change the ranking, so discrimination is unmoved by construction, and
-it leaves no prediction above 0.50, so the model flags nobody at the
-prespecified threshold. \emph{The binding constraint is the discrimination of
-0.70, not the calibration}, and no post-hoc correction addresses it.
+it leaves no prediction above 0.50. That does not mean the model is
+clinically useless; it means 0.50 is no longer an appropriate operating
+threshold for this cohort, and no threshold can be chosen without a
+stated decision and a decision-curve analysis, neither of which this
+study provides. What recalibration cannot repair is the discrimination
+of 0.70, since it does not change the ranking.
 
 \textbf{The difference cannot be attributed to internal optimism alone.}
 This design cannot decompose it, and at least six mechanisms plausibly
@@ -1124,7 +1169,7 @@ contribute:
 \end{itemize}
 
 Internal optimism is a seventh candidate, and the study offers indirect
-support for it---the honest intervals of Section~\ref{sec:honest} and the
+support for it---the whole-procedure intervals of Section~\ref{sec:honest} and the
 saturation behaviour of Section~\ref{sec:bid} both indicate a sample that
 should not be expected to transfer---but the probe does not isolate it.
 Attributing the fall to any single mechanism, optimism included, would
@@ -1226,8 +1271,9 @@ numbers describe the task rather than the learner.
 \centering
 \includegraphics[width=\columnwidth]{fig_r16_bid_saturation.pdf}
 \caption{Held-out discrimination against the fraction of the training fold
-used. The curve is flat from a tenth of the data onward, so the benchmark
-cannot distinguish methods by how efficiently they learn.}
+used. Performance approached its observed plateau with approximately 10\% of
+each training fold, so the benchmark provides little practical headroom for
+distinguishing the evaluated methods by sample efficiency under this design.}
 \label{fig:saturation}
 \end{figure}
 
@@ -1316,66 +1362,26 @@ The wider implication concerns how benchmark results are read. Two of the
 three mechanisms here are properties of the data that no amount of careful
 modelling can correct, and the third invalidates the evidence normally taken
 as decisive. A reported accuracy of 99\% on this benchmark is compatible with
-a model that has learned nothing transferable, and distinguishing the cases
+a model whose performance need not transfer, and distinguishing the cases
 requires exactly the leakage audit, subgroup analysis and provenance check
 reported here. Section~\ref{sec:bid} asks the further question of whether the
 benchmark can rank methods at all, and answers no: the entire modelling
 exercise is worth about 0.03 ROC-AUC over one raw measurement, and a tenth of
 the training data suffices.
 
-\subsection{Extension to synthetic tabular and synthetic patient data}
+\subsection{Future work: synthetic tabular and synthetic patient data}
 \label{sec:synthetic}
 
-The failure modes documented here are not specific to real data, and the
-safeguards generalise directly to pipelines that generate or evaluate
-synthetic tabular records. Synthetic-data evaluation is in one respect
-harder: a generator trained on a source table can reproduce individual rows,
-so the question ``is the evaluation set independent of the training set?''
-becomes a question about memorisation as well as provenance, and the
-mechanisms of Sections~\ref{sec:mech3} and \ref{sec:gate} answer only the
-latter.
-
-Seven components of the protocol we implement are already directly reusable.
-Cryptographic dataset fingerprints establish that an input has not silently
-changed; here the source file is SHA-256 checksummed on every load and
-re-verified in continuous integration. Exact-row and near-duplicate detection
-across training, validation, test and reference sets generalises the
-interval-containment matching of Section~\ref{sec:mech3}, which is a
-tolerance-based near-duplicate test calibrated against a permutation null.
-Entity-level overlap checks using stable identifiers, or privacy-preserving
-linkage where identifiers cannot be shared, correspond to the bipartite
-matching and held-out categorical confirmation reported there.
-Feature--target leakage scans and the detection of target proxies and
-post-outcome variables correspond to the declared prohibited-column sets and
-the outcome-proxy audit of Section~\ref{sec:leakageprev}. Enforcing that all
-preprocessing is
-fitted inside cross-validation folds is the guard tested here. Provenance
-manifests recording origin, version, transformations and split history
-correspond to the run manifest and external-dataset registry. And the
-fail-closed gate---blocking evaluation when overlap, leakage or undocumented
-provenance exceeds a threshold---is implemented as a test that fails when any
-non-independent cohort appears in an external-validation table.
-
-Two further components are specific to synthetic data and are \emph{not}
-implemented here. Membership-inference and memorisation checks ask whether a
-synthetic record discloses that a particular real patient was in the training
-set. Nearest-neighbour similarity and distance-to-closest-record diagnostics
-ask whether synthetic rows are near-copies of real ones, which is both a
-privacy question and an evaluation-validity question: a synthetic test set
-whose records sit arbitrarily close to training records reproduces, in a
-subtler form, exactly the pseudo-external validation of
-Section~\ref{sec:mech3}. Adding them to the gate we release is the natural
-next step and we have not taken it; the present work provides the provenance
-half of the problem, not the memorisation half.
-
-We note the analogy carries a caution as well as a recipe. The most
-consequential mechanism in this study was not leakage but case
-mix---something no fingerprint, hash or duplicate scan would detect. A
-synthetic cohort can be free of memorisation, pass every overlap check, and
-still be uninformative because its severity distribution makes the task
-trivial. Diagnostics of the kind proposed in Section~\ref{sec:bid} are
-complementary to provenance gating for that reason, and we would expect a
-mature synthetic-data evaluation pipeline to run both.
+The failure modes documented here are not specific to real data. A
+generator trained on a source table can reproduce individual rows, so
+``is the evaluation set independent of the training set?'' becomes a
+question about memorisation as well as provenance, and the mechanisms of
+Sections~\ref{sec:mech3} and~\ref{sec:leakageprev} answer only the
+latter. Seven components of the protocol we implement transfer directly;
+two that synthetic data additionally require --- membership-inference and
+nearest-neighbour memorisation checks --- are \emph{not} implemented
+here. We set the question out in the supplement rather than the main
+text because this study contributes no experimental evidence on it.
 
 %==============================================================================
 \section{Limitations}
@@ -1451,12 +1457,19 @@ Machine-learning results on this benchmark cluster at the discrimination
 ceiling. We identify three mechanisms that put them there. Target leakage
 takes any configuration to ROC-AUC 1.000. Case mix---84\% of cases at stage
 3--5, with haemoglobin alone at 0.968---puts valid models at the ceiling
-unaided, and appears to be the principal explanation, though its
-contribution cannot be cleanly separated from diagnostic incorporation and
-feature redundancy. And the two releases the literature treats as
+unaided. The persistence of that performance across restricted feature sets
+is consistent with unusually separable cohort composition, although its
+contribution cannot be isolated from residual incorporation, proxy
+information, feature redundancy and unknown recruitment mechanisms; holding
+the models fixed and re-weighting the severity mix toward early disease
+moves discrimination by less than 0.01. What the restrictions do reach is
+the boundary of the renal work-up itself: on the five variables plausibly
+available before it, discrimination falls to 0.930. And the two releases the
+literature treats as
 independent cohorts draw on the same patients---all 200 analysed records
 match into the 2015 release, 187 of them uniquely---so published
-cross-dataset validations between them measure resubstitution.
+cross-dataset validations between them are non-independent evaluations on
+overlapping patients.
 
 Transferring the models unchanged to an independent cohort, as a
 transportability probe rather than a definitive external validation, then
@@ -1465,8 +1478,10 @@ indicates what those mechanisms may cost: discrimination of 0.997 becomes
 cases from a critical-care population, that difference reflects some
 combination of small-sample uncertainty, case mix, measurement definition,
 missingness, clinical setting and distribution shift as well as any internal
-optimism, and the probe cannot separate them. It bounds the direction rather
-than the magnitude---but the direction is the point.
+optimism, and the probe cannot separate them. The analysis provides
+exploratory evidence that near-perfect internal discrimination does not
+persist under this particular cross-setting transfer, and supports no
+claim about any other population.
 
 What the work supports is a methodological claim in two parts. About this
 benchmark: its reported numbers are largely explained by properties of the
@@ -1501,6 +1516,36 @@ guarantees, including the provenance gate and the external-cohort temporal
 guard. Environment and BLAS build are recorded in a lock file. Reporting
 follows the spirit of TRIPOD+AI~\cite{tripod2024}; a completed checklist
 accompanies the repository.
+
+\textbf{Data availability.} Both analysed UCI releases are openly licensed
+(CC~BY~4.0) and are retrieved by scripted download with recorded SHA-256
+checksums~\cite{uci2015,uci2023}. The MIMIC-IV Clinical Database Demo used
+for the transportability probe is openly available from PhysioNet. One
+further registered candidate cohort is access-restricted and was not
+obtained; Section~\ref{sec:external} states where that limits the work. No
+data were generated by this study.
+
+\textbf{Code availability.} All analysis code, the feature registry, the
+literature extraction sheet and the manuscript source are in the
+accompanying repository, together with \texttt{reproduce.py}, which runs the
+pipeline end to end and verifies that manuscript values match generated
+results. TODO(author): replace this sentence with the archived repository
+DOI on acceptance.
+
+\textbf{Ethics.} This study analyses previously collected, publicly
+released, de-identified data and generated no new patient data, so it did
+not require ethical review. Use of the MIMIC-IV demonstration database
+follows its published data-use terms.
+
+\textbf{Registration.} This study was not preregistered. The model-selection
+rule, the prohibited-column set and the provenance-gate verdict rule were
+fixed in code before the results they govern were computed, and the commit
+history records that ordering; analyses added after seeing results are
+labelled post hoc wherever they appear.
+
+\textbf{Funding, competing interests and author contributions.}
+TODO(author): to be completed by the authors before submission; see
+\texttt{paper/AUTHOR\_ACTION\_CHECKLIST.md}.
 
 %==============================================================================
 \begin{thebibliography}{99}

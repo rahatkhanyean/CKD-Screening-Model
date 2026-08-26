@@ -1,0 +1,3 @@
+null,description,n_draws,mean,sd,max,observed,n_at_or_above_observed,p_upper_bound
+independent_column_permutation,each candidate column permuted independently; destroys all cross-variable structure,200,0.0031000000000000003,0.003702504924178743,0.015,1.0,0,0.004975124378109453
+gaussian_copula_marginals_and_correlations,"outcome-stratified Gaussian copula on ranks, mapped back to the observed discrete support; preserves marginals and approximate dependence",200,0.05857500000000001,0.014189824898611904,0.105,1.0,0,0.004975124378109453

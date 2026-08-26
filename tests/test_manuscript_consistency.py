@@ -46,6 +46,14 @@ EXPECTED_HASHES = {
 }
 
 
+def table_or_skip(name: str):
+    """Load a generated table, skipping if the stage has not been run."""
+    path = TABLES / name
+    if not path.is_file():
+        pytest.skip(f"{name} not generated; run the pipeline")
+    return pd.read_csv(path)
+
+
 def _expand_inputs(source: str, base: Path, depth: int = 0) -> str:
     """Inline ``\\input`` directives, as the LaTeX build does.
 
@@ -417,3 +425,111 @@ class TestFiguresAreTypeset:
             if hits:
                 offenders[name] = hits
         assert not offenders, f"markup leaked into typeset figures: {offenders}"
+
+
+class TestCorrectedTaxonomyReachesTheManuscript:
+    """The KDIGO correction must hold in code, results and prose together.
+
+    The reviewer found that the registry classified blood urea as a
+    diagnostic-criterion input and urine albumin as an ordinary predictor,
+    which inverts the KDIGO definition: albuminuria is the first-listed
+    marker of kidney damage, and blood urea is not a criterion at all. Every
+    "incorporation removed" statement was therefore false, because the
+    albuminuria limb stayed in the model. These tests stop that returning.
+    """
+
+    def test_restricted_sets_actually_remove_both_kdigo_limbs(self):
+        from ckd.features.registry import incorporation_variables
+
+        table = table_or_skip("table_49_restricted_featuresets.csv")
+        rows = table[table["featureset"]
+                     == "minus all incorporation-risk variables"]
+        assert len(rows), "the broad incorporation configuration was not run"
+        kept = set(str(rows.iloc[0]["features"]).split(";"))
+        leftover = kept & incorporation_variables()
+        assert not leftover, (
+            f"configuration claims to remove incorporation risk but retains "
+            f"{sorted(leftover)}"
+        )
+        # The strict variant must still remove both criterion inputs.
+        strict = table[table["featureset"]
+                       == "minus criterion inputs only (strict)"]
+        if len(strict):
+            kept = set(str(strict.iloc[0]["features"]).split(";"))
+            assert not (kept & incorporation_variables(strict=True))
+
+    def test_manuscript_does_not_call_blood_urea_a_criterion(self, tex):
+        """The retracted clinical claim, in the exact form it took."""
+        lowered = tex.lower()
+        for phrase in (
+            "criterion --- serum creatinine and blood urea",
+            "diagnostic criterion --- serum creatinine and blood urea",
+        ):
+            assert phrase not in lowered, (
+                "manuscript still names blood urea as a diagnostic-criterion "
+                "input; KDIGO does not list it"
+            )
+
+    def test_manuscript_states_both_limbs(self, tex):
+        assert "albuminuria" in tex.lower(), (
+            "the albuminuria limb of the KDIGO definition must be discussed"
+        )
+
+
+class TestMatchingNullsAreLabelledAsImplemented:
+    def test_only_implemented_nulls_are_reported(self):
+        summary = table_or_skip("table_46_provenance_null_summary.csv")
+        names = set(summary["null"])
+        assert names == {
+            "independent_column_permutation",
+            "gaussian_copula_marginals_and_correlations",
+        }, f"unexpected null set: {sorted(names)}"
+
+    def test_row_permutation_is_not_offered_as_a_null(self):
+        """Bipartite matching is invariant to candidate row order, so a
+        whole-row permutation cannot be an inferential null. It may be
+        described as a property of the estimator; it may not appear in the
+        table of nulls."""
+        summary = table_or_skip("table_46_provenance_null_summary.csv")
+        assert not any("row" in n and "permutation" in n
+                       for n in summary["null"])
+
+    def test_copula_null_preserves_dependence(self):
+        """A null that flattened the correlation structure would be weaker
+        than the manuscript claims it is."""
+        diag = table_or_skip("table_53_copula_null_diagnostics.csv")
+        pairs = diag[diag["quantity"] == "spearman_pair"]
+        assert len(pairs) > 0
+        gap = (pairs["real"] - pairs["null_mean"]).abs()
+        assert gap.mean() < 0.10, (
+            f"copula null does not preserve dependence: mean |real - null| "
+            f"Spearman = {gap.mean():.3f}"
+        )
+        marg = diag[diag["quantity"] == "marginal"]
+        assert int(marg["synthetic_values_off_observed_support"].sum()) == 0, (
+            "synthetic values fall outside the observed support, which would "
+            "depress the null for a mechanical reason"
+        )
+
+
+class TestLiteratureClaimsRestToVerifiedStudies:
+    def test_no_prevalence_language_in_the_manuscript(self, tex):
+        lowered = tex.lower()
+        for word in ("frequently report", "routinely report",
+                     "most studies", "commonly report"):
+            assert word not in lowered, (
+                f"prevalence claim {word!r} is not supported by a targeted, "
+                "non-systematic sample"
+            )
+
+    def test_cross_release_claim_matches_verified_count(self, tex):
+        summary = table_or_skip("table_26_prior_work_summary.csv")
+        value = dict(zip(summary["quantity"], summary["value"]))
+        verified = int(value["n_cross_dataset_VERIFIED_from_source"])
+        # The manuscript must not assert the design of more studies than it
+        # verified. It said "three" while only one is verifiable.
+        assert verified >= 1
+        assert "three validate\nacross the two releases" not in tex, (
+            "manuscript asserts a cross-release design for studies whose "
+            "text was never obtained"
+        )

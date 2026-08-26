@@ -111,6 +111,14 @@ def metrics_with_ci(y, prob, n_boot, seed, threshold=0.5) -> dict:
                            / max((a == 1).sum(), 1)),
         y, prob, n_boot, seed + 2)
     out["sensitivity_ci_low"], out["sensitivity_ci_high"] = lo, hi
+    lo, hi = boot_ci(
+        lambda a, b: float(((b < threshold) & (a == 0)).sum()
+                           / max((a == 0).sum(), 1)),
+        y, prob, n_boot, seed + 3)
+    out["specificity_ci_low"], out["specificity_ci_high"] = lo, hi
+    lo, hi = boot_ci(lambda a, b: brier_score_loss(a, b), y, prob,
+                     n_boot, seed + 4)
+    out["brier_ci_low"], out["brier_ci_high"] = lo, hi
     return out
 
 
@@ -169,24 +177,49 @@ def main() -> int:
     # ---- 2. restricted feature sets --------------------------------------
     registry = pd.read_csv(project_root() / "data" / "feature_registry.csv")
     full = list(get_config(HOST).features)
-    consequence = set(registry.loc[
-        registry["leakage_category"] == "consequence_of_advanced_disease",
-        "variable"])
-    incorporation = set(registry.loc[
-        registry["leakage_category"] == "incorporation_risk", "variable"])
-    pre_index = set(registry.loc[
-        registry["leakage_category"] == "legitimate_pre_index", "variable"])
+    def by_category(*names: str) -> set[str]:
+        return set(registry.loc[
+            registry["leakage_category"].isin(names), "variable"])
+
+    consequence = by_category("consequence_of_advanced_disease")
+    criterion = by_category("diagnostic_criterion_input")       # sc, al
+    sediment = by_category("possible_criterion_sediment")       # rbc, pc, ...
+    incorporation = criterion | sediment
+    pre_index = by_category("legitimate_pre_index")
+    uncertain = set(registry.loc[registry["uncertainty_flag"], "variable"])
+
+    # eGFR-related information. grf and stage are already barred, so removing
+    # creatinine removes what remains of the GFR limb in the released file.
+    egfr_related = {"sc"} | by_category("deterministic_outcome_derivative")
+
+    def keep(drop: set[str]) -> list[str]:
+        return [f for f in full if f not in drop]
 
     restricted = {
+        # Direct leakage and deterministic derivatives are already excluded
+        # from the reference set by construction, so that condition is the
+        # same set of columns and is not re-run as a separate row.
         "full_valid (reference)": full,
-        "minus consequences of advanced disease":
-            [f for f in full if f not in consequence],
-        "minus diagnostic-criterion inputs":
-            [f for f in full if f not in incorporation],
-        "minus both":
-            [f for f in full if f not in (consequence | incorporation)],
-        "pre-index available only":
-            [f for f in full if f in pre_index],
+        # GFR limb of the KDIGO definition.
+        "minus creatinine/eGFR information": keep(egfr_related),
+        # Albuminuria limb.
+        "minus albuminuria information": keep({"al"}),
+        # Criterion inputs only; sediment findings retained (strict reading).
+        "minus criterion inputs only (strict)": keep(criterion),
+        # Every variable with plausible incorporation risk (broad reading).
+        "minus all incorporation-risk variables": keep(incorporation),
+        "minus consequences of advanced disease": keep(consequence),
+        "minus incorporation and consequences":
+            keep(incorporation | consequence),
+        "pre-index available only": [f for f in full if f in pre_index],
+        # Conservative: pre-index AND meaning/timing not in doubt.
+        "conservative pre-index (no uncertain)":
+            [f for f in full if f in pre_index and f not in uncertain],
+        # Minimal low-cost set, intersected with the conservative set so it
+        # stays scientifically meaningful rather than merely cheap.
+        "minimal low-cost conservative":
+            [f for f in get_config("low_cost_model").features
+             if f in pre_index and f not in uncertain],
     }
 
     print("\nrestricted feature sets ...")
@@ -214,8 +247,16 @@ def main() -> int:
                                 args.boot, seed)
             rrows.append({"featureset": label, "n_features": len(features),
                           "model": model_name,
+                          "features": ";".join(features),
                           "removed": ";".join(sorted(set(full) - set(features)))
-                          or "none", **m})
+                          or "none",
+                          # "Saturated" is a description of where the interval
+                          # sits, not a verdict: the lower bound of the 95%
+                          # interval still lies at or above 0.99, so this
+                          # configuration retains no measurable headroom on
+                          # this sample.
+                          "saturated": bool(m["roc_auc_ci_low"] >= 0.99),
+                          **m})
         best_row = max([r for r in rrows if r["featureset"] == label],
                        key=lambda r: r["roc_auc"])
         print(f"  {label:40s} k={len(features):2d} best AUC "

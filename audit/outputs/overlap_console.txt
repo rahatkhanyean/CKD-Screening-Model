@@ -1,0 +1,27 @@
+id=336: 400 records (250 ckd)
+id=857: 200 patients (128 ckd)
+shared containment variables (13): ['age', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot', 'hemo', 'pcv', 'wbcc', 'rbcc']
+intervals parsed; 0 missing/unparsed cells (treated as compatible)
+
+OBSERVED  match fraction = 1.0000
+          unique pins     = 187 / 200
+          max partners    = 2, mean 1.06, zero-partner rows 0
+
+NULL      column permutation over 200 draws
+          mean 0.0025  sd 0.0036  max 0.0150
+          draws >= observed: 0 (p <= 0.0050)
+
+CROSS-CHECK on 10 variables never used in matching
+          1763/1763 comparisons agree (1.0000); 0 contradictions
+            ane     186 agree,   0 disagree
+            appet   186 agree,   0 disagree
+            ba      184 agree,   0 disagree
+            cad     186 agree,   0 disagree
+            dm      186 agree,   0 disagree
+            htn     186 agree,   0 disagree
+            pc      159 agree,   0 disagree
+            pcc     184 agree,   0 disagree
+            pe      186 agree,   0 disagree
+            rbc     120 agree,   0 disagree
+
+wrote overlap_summary.json, overlap_null_draws.csv, overlap_per_patient.csv

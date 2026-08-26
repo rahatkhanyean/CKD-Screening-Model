@@ -1,0 +1,7 @@
+file,url,status,bytes,sha256,fetched_utc
+uci_336_page.html,https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease,200,212214,44c5172eeb2e1cd2bc87f4d6dc1686885ba285d5e5160add7d10cb8687314e96,2026-08-26T10:52:04+00:00
+uci_857_page.html,https://archive.ics.uci.edu/dataset/857/risk+factor+prediction+of+chronic+kidney+disease,200,131255,1021385c19b69ea3c818a9271c70fbc7a19bef5735323ceb8e435e2b90d30aa7,2026-08-26T10:52:04+00:00
+uci_336_legacy_index.html,https://archive.ics.uci.edu/ml/machine-learning-databases/00336/,404,9,,2026-08-26T10:52:04+00:00
+uci_336_names.txt,https://archive.ics.uci.edu/ml/machine-learning-databases/00336/Chronic_Kidney_Disease.rar,200,19260,b7782fba71381f998f4478f088de06e0ae76b043024d7cd4ce1ae8b0578db165,2026-08-26T10:52:04+00:00
+uci_336_static_index.html,https://archive.ics.uci.edu/static/public/336/,404,9,,2026-08-26T10:52:04+00:00
+uci_857_static_index.html,https://archive.ics.uci.edu/static/public/857/,404,9,,2026-08-26T10:52:04+00:00

@@ -1,0 +1,14 @@
+wrote G:\My Drive\Projects\CKD Screening Model\audit\outputs\enam_trace.csv (264 rows)
+
+verdict
+no_match                 192
+mentions_enam_only        64
+mentions_both_no_link      5
+explicit_link              2
+inaccessible               1
+
+=== explicit_link rows ===
+   | uci_857_card
+       https://archive.ics.uci.edu/dataset/857/risk+factor+prediction+of+chronic+kidney+disease
+  2024 | Optimizing Chronic Kidney Disease Prediction: A Machine Learning Approach with Minimal Diagnost
+       https://doi.org/10.59796/jcst.v15n1.2025.76

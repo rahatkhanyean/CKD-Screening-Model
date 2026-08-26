@@ -1,0 +1,15 @@
+screening 69 works citing the id=857 native paper
+wrote G:\My Drive\Projects\CKD Screening Model\audit\outputs\literature.csv (69 rows)
+
+release_used:
+release_used
+unclear    65
+857         2
+336         2
+
+cross/external validation claimed in abstract:
+cross_or_external_validation_claimed
+not stated in abstract    68
+claimed                    1
+
+flagged as potentially non-independent: 0

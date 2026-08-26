@@ -79,6 +79,16 @@ def summarise(table: pd.DataFrame) -> pd.DataFrame:
         ("n_kabir_coded_sc_egfr_yes", int((table["kabir_sc_egfr_coding"] == "yes").sum())),
         ("n_using_uci2023_or_merged", int(uses_v2.sum())),
         ("n_cross_dataset_uci2015_uci2023", int(cross.sum())),
+        # A cross-release design may only be asserted of a specific paper
+        # when its own text verifies it. The remainder are attributed to the
+        # reference survey's comparison table and support no claim here.
+        ("n_cross_dataset_VERIFIED_from_source",
+         int((cross & verified).sum())),
+        ("n_cross_dataset_attributed_only",
+         int((cross & ~verified).sum())),
+        ("n_merging_releases_VERIFIED_from_source", int(
+            (table["validation_design"].str.contains("MERGED", case=False)
+             & verified).sum())),
         ("n_with_genuinely_external_validation", int(
             (table["did_external_validation"] == "yes").sum())),
     ]

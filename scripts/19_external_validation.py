@@ -47,7 +47,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sklearn.calibration import CalibratedClassifierCV  # noqa: E402
 from sklearn.base import clone  # noqa: E402
-from sklearn.metrics import brier_score_loss, roc_auc_score  # noqa: E402
+from sklearn.metrics import (  # noqa: E402
+    average_precision_score,
+    brier_score_loss,
+    roc_auc_score,
+)
 from sklearn.model_selection import GridSearchCV, StratifiedKFold  # noqa: E402
 
 from ckd.config import ensure_dirs, load_config, project_root  # noqa: E402
@@ -81,11 +85,13 @@ def check_gate(tables_dir: Path, dataset_id: str) -> None:
     print(f"gate ok: {dataset_id} is {verdict}")
 
 
-def auc_ci(y, prob, n_boot: int = 2000, seed: int = 0) -> tuple[float, float]:
-    """Stratified patient-level bootstrap interval for ROC-AUC.
+def auc_ci(y, prob, n_boot: int = 2000, seed: int = 0,
+           score=roc_auc_score) -> tuple[float, float]:
+    """Stratified patient-level bootstrap interval for a ranking metric.
 
     Reported because the external cohort is small: an estimate on 20 events
-    without an interval invites over-reading.
+    without an interval invites over-reading. ``score`` selects the metric,
+    so the ROC-AUC and PR-AUC intervals come from the same resamples.
     """
     rng = np.random.default_rng(seed)
     pos, neg = np.flatnonzero(y == 1), np.flatnonzero(y == 0)
@@ -97,7 +103,7 @@ def auc_ci(y, prob, n_boot: int = 2000, seed: int = 0) -> tuple[float, float]:
         ])
         if len(np.unique(y[idx])) < 2:
             continue
-        draws.append(roc_auc_score(y[idx], prob[idx]))
+        draws.append(score(y[idx], prob[idx]))
     return float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
 
 
@@ -135,6 +141,8 @@ def metrics(y, prob, label: str, with_ci: bool = False, seed: int = 0) -> dict:
         "n_positive": int(pos.sum()),
         "prevalence": round(float(pos.mean()), 4),
         "roc_auc": float(roc_auc_score(y, prob)),
+        "pr_auc": float(average_precision_score(y, prob)),
+        "pr_auc_baseline": round(float(pos.mean()), 4),
         "brier": float(brier_score_loss(y, prob)),
         "sensitivity": float((pred & pos).sum() / max(pos.sum(), 1)),
         "specificity": float((~pred & neg).sum() / max(neg.sum(), 1)),
@@ -144,6 +152,9 @@ def metrics(y, prob, label: str, with_ci: bool = False, seed: int = 0) -> dict:
     if with_ci:
         low, high = auc_ci(y, prob, seed=seed)
         row["roc_auc_ci_low"], row["roc_auc_ci_high"] = low, high
+        plow, phigh = auc_ci(y, prob, seed=seed,
+                             score=average_precision_score)
+        row["pr_auc_ci_low"], row["pr_auc_ci_high"] = plow, phigh
     return row
 
 
@@ -251,7 +262,12 @@ def main() -> int:
 
     table = pd.DataFrame(rows)
     ordered = ["model", "arm", "n", "n_positive", "prevalence", "roc_auc",
-               "roc_auc_ci_low", "roc_auc_ci_high", "brier", "sensitivity",
+               "roc_auc_ci_low", "roc_auc_ci_high",
+               # PR-AUC matters here precisely because prevalence differs
+               # between the cohorts (0.64 internally, 0.21 externally); the
+               # baseline column is the prevalence a no-skill model achieves.
+               "pr_auc", "pr_auc_ci_low", "pr_auc_ci_high", "pr_auc_baseline",
+               "brier", "sensitivity",
                "specificity", "calibration_slope", "calibration_intercept"]
     table = table[[c for c in ordered if c in table.columns]]
     table["dataset"] = DATASET_ID

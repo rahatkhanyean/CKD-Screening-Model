@@ -43,10 +43,21 @@ PROHIBITED_CATEGORIES = frozenset({
 
 #: Categories that are admissible but whose use must be disclosed.
 CAVEATED_CATEGORIES = frozenset({
-    "incorporation_risk",
+    "diagnostic_criterion_input",
+    "possible_criterion_sediment",
+    "correlated_renal_biomarker",
     "consequence_of_advanced_disease",
     "uncertain_provenance",
 })
+
+#: Categories carrying diagnostic-incorporation risk, strongest first. A
+#: configuration described as free of incorporation risk must exclude every
+#: variable in every one of these categories --- excluding creatinine alone
+#: leaves the albuminuria limb of the KDIGO definition in the model.
+INCORPORATION_CATEGORIES: tuple[str, ...] = (
+    "diagnostic_criterion_input",
+    "possible_criterion_sediment",
+)
 
 REGISTRY_PATH = "data/feature_registry.csv"
 
@@ -118,4 +129,22 @@ def variables_by_category(category: str) -> tuple[str, ...]:
     registry = load_registry()
     return tuple(
         registry.loc[registry["leakage_category"] == category, "variable"]
+    )
+
+
+def incorporation_variables(strict: bool = False) -> frozenset[str]:
+    """Columns carrying diagnostic-incorporation risk.
+
+    ``strict`` restricts the set to variables that are inputs to a KDIGO
+    criterion beyond reasonable doubt (creatinine, urine albumin). The
+    default additionally includes urine sediment findings, which are
+    criterion-adjacent but whose participation the release does not let us
+    verify. Both sets are reported, because the conclusion should not depend
+    on where an arguable boundary is drawn.
+    """
+    registry = load_registry()
+    categories = (("diagnostic_criterion_input",) if strict
+                  else INCORPORATION_CATEGORIES)
+    return frozenset(
+        registry.loc[registry["leakage_category"].isin(categories), "variable"]
     )
